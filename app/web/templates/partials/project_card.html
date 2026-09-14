@@ -1,0 +1,19 @@
+<li>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;">
+    <strong>{{ project.name }}</strong>
+    <span class="project-meta">{{ project.created_at.strftime("%d/%m/%Y") }}</span>
+  </div>
+  <div class="project-meta">{{ project.bible_reference }}</div>
+  <div class="progress-bar"><span style="width: {{ project.progress }}%"></span></div>
+  <div class="steps">
+    {% for key in STEP_ORDER %}
+      {% set status = project.steps[key] %}
+      <span class="{{ STEP_CSS_CLASS[status] }}">
+        <span class="step-icon">{{ STEP_ICONS[status] }}</span>{{ STEP_LABELS[key] }}
+      </span>
+    {% endfor %}
+  </div>
+  <a class="btn secondary" href="/projects/{{ project.id }}">
+    {% if project.state.value == "published" %}Ver projeto{% else %}Continuar projeto{% endif %}
+  </a>
+</li>

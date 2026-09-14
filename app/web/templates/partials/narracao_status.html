@@ -1,0 +1,84 @@
+<div id="narracao-status"
+     {% if project.state.value == 'narration_generating' %}
+     hx-get="/projects/{{ project.id }}/narracao/status" hx-trigger="load delay:3s" hx-swap="outerHTML"
+     {% endif %}>
+  {% if project.state.value == 'narration_generating' %}
+    <p><span class="step-icon step-running">◉</span> Gerando narração com IA... isso normalmente leva cerca de um minuto, podendo levar até uns dois minutos se o limite gratuito de uso for atingido momentaneamente. Esta página se atualiza sozinha.</p>
+  {% elif scenes %}
+    <p class="badge badge-ok">✓ Narração gerada — {{ scenes|length }} cenas, ~{{ total_minutes }} min</p>
+    {% if latest_job and latest_job.status == 'failed' %}
+      <p class="form-hint">Última tentativa de regenerar falhou: {{ latest_job.error_message }} (o roteiro abaixo é de uma geração anterior, ainda válido.)</p>
+    {% endif %}
+    {% if ai_configured %}
+      <form method="post" action="/projects/{{ project.id }}/narracao/gerar"
+            onsubmit="return confirm('Isso substitui a narração e as cenas atuais. Continuar?');" style="margin-bottom:1.25rem;">
+        <button class="btn secondary" type="submit">Regenerar narração</button>
+      </form>
+    {% else %}
+      <p class="form-hint" style="margin-bottom:0.5rem;">Chave da API da Groq não configurada — necessária para regenerar.</p>
+      <a class="btn secondary" href="/settings#groq_api_key" style="margin-bottom:1.25rem;">Configurar chave</a>
+    {% endif %}
+
+    <h4>Texto para narração</h4>
+    <p class="form-hint" style="margin-bottom:0.5rem;">
+      Só o texto que será narrado, corrido, sem os rótulos de cena — pronto para o narrador ler ou gravar.
+    </p>
+    <textarea readonly rows="14" style="width:100%;font-family:inherit;font-size:0.92rem;line-height:1.6;padding:0.75rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);resize:vertical;">{{ flowing_text }}</textarea>
+    <p style="margin:0.5rem 0 0;">
+      <a class="btn secondary" href="/projects/{{ project.id }}/narracao/texto-corrido" target="_blank">Abrir/baixar texto corrido</a>
+    </p>
+
+    <details style="margin-top:1.25rem;">
+      <summary style="cursor:pointer;color:var(--accent);font-size:0.9rem;">Ver roteiro completo (com cena, local e momento)</summary>
+      <pre style="white-space:pre-wrap;max-height:420px;overflow:auto;background:var(--bg);padding:1rem;border-radius:8px;border:1px solid var(--border);margin-top:0.5rem;">{{ narration_text }}</pre>
+    </details>
+
+    <h4 style="margin-top:1.5rem;">Cenas</h4>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Local</th>
+            <th>Momento</th>
+            <th>Personagens</th>
+            <th>Emoção</th>
+            <th>Duração est.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for scene in scenes %}
+            <tr>
+              <td>{{ "%03d"|format(scene.order) }}</td>
+              <td>{{ scene.location }}</td>
+              <td>{{ scene.time }}</td>
+              <td>{{ scene.characters|join(", ") }}</td>
+              <td>{{ scene.emotion }}</td>
+              <td>{{ scene.estimated_duration }}s</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% elif latest_job and latest_job.status == 'failed' %}
+    <p class="badge badge-error">⚠ Falha ao gerar narração</p>
+    <p class="form-hint">{{ latest_job.error_message }}</p>
+    {% if ai_configured %}
+      <form method="post" action="/projects/{{ project.id }}/narracao/gerar">
+        <button class="btn" type="submit">Tentar novamente</button>
+      </form>
+    {% else %}
+      <p class="form-hint" style="margin-bottom:0.5rem;">Chave da API da Groq não configurada.</p>
+      <a class="btn secondary" href="/settings#groq_api_key">Configurar chave</a>
+    {% endif %}
+  {% elif not ai_configured %}
+    <p class="badge badge-warning">⚠ Chave da API da Groq não configurada</p>
+    <p class="form-hint" style="margin-bottom:0.75rem;">Necessária para gerar a narração.</p>
+    <a class="btn" href="/settings#groq_api_key">Configurar chave</a>
+  {% else %}
+    <p class="form-hint">Gere a narração completa a partir da passagem e da Bíblia Visual cadastradas neste projeto.</p>
+    <form method="post" action="/projects/{{ project.id }}/narracao/gerar">
+      <button class="btn" type="submit">Gerar narração</button>
+    </form>
+  {% endif %}
+</div>

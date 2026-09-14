@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Projetos — Produção Bíblica{% endblock %}
+{% block content %}
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <h2 style="margin:0;">Projetos</h2>
+    <a class="btn" href="/projects/new">+ Novo projeto</a>
+  </div>
+
+  <div class="card">
+    <h3>Em produção</h3>
+    {% if in_progress %}
+      <ul class="project-list">
+        {% for project in in_progress %}
+          {% include "partials/project_card.html" %}
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty-state">Nenhum projeto em produção ainda. Crie o primeiro com "+ Novo projeto".</p>
+    {% endif %}
+  </div>
+
+  {% if completed %}
+    <div class="card">
+      <h3>Publicados</h3>
+      <ul class="project-list">
+        {% for project in completed %}
+          {% include "partials/project_card.html" %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endblock %}

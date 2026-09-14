@@ -1,0 +1,111 @@
+<div id="imagens-status"
+     {% if latest_job and latest_job.status == 'running' %}
+     hx-get="/projects/{{ project.id }}/imagens/status" hx-trigger="load delay:3s" hx-swap="outerHTML"
+     {% endif %}>
+  {% set job_running = latest_job and latest_job.status == 'running' %}
+  {% if not scenes %}
+    <p class="form-hint">Gere a narração primeiro (aba Narração).</p>
+  {% elif not all_scenes_have_audio %}
+    <p class="form-hint">Gere o áudio primeiro (aba Áudio) — o número de imagens de cada cena é calculado a partir da duração real do áudio.</p>
+  {% elif job_running %}
+    <p><span class="step-icon step-running">◉</span> Gerando prompts de imagem... esta página se atualiza sozinha.</p>
+  {% elif not image_prompts %}
+    <p class="form-hint" style="margin-bottom:0.5rem;">
+      Estimativa: <strong>~{{ estimated_panel_count }} imagens</strong> para {{ scenes|length }} cenas
+      (cada cena ÷ {{ video_segment_seconds }}s por clipe de vídeo).
+    </p>
+    {% if latest_job and latest_job.status == 'failed' %}
+      <p class="badge badge-error">⚠ Falha ao gerar prompts</p>
+      <p class="form-hint">{{ latest_job.error_message }}</p>
+    {% endif %}
+    <form method="post" action="/projects/{{ project.id }}/imagens/gerar">
+      <button class="btn" type="submit">Gerar prompts de imagem</button>
+    </form>
+  {% else %}
+    {% if project.state.value == 'image_prompts_generating' %}
+      <p class="badge badge-warning" style="margin-bottom:0.5rem;">⚠ Geração incompleta — algumas cenas ainda não têm painéis</p>
+      {% if latest_job and latest_job.status == 'failed' %}
+        <p class="form-hint">{{ latest_job.error_message }}</p>
+      {% endif %}
+      <form method="post" action="/projects/{{ project.id }}/imagens/gerar" style="margin-bottom:1rem;">
+        <button class="btn" type="submit">Continuar geração</button>
+      </form>
+    {% else %}
+      <p class="badge {% if missing_count == 0 %}badge-ok{% else %}badge-warning{% endif %}">
+        {% if missing_count == 0 %}✓ Todas as {{ image_prompts|length }} imagens recebidas{% else %}⚠ {{ image_prompts|length - missing_count }}/{{ image_prompts|length }} imagens recebidas — faltam {{ missing_count }}{% endif %}
+      </p>
+      {% if latest_job and latest_job.status == 'failed' %}
+        <p class="form-hint">Última tentativa de gerar/regenerar falhou: {{ latest_job.error_message }}</p>
+      {% endif %}
+    {% endif %}
+
+    <p style="margin:0.75rem 0;">
+      <a class="btn secondary" href="/projects/{{ project.id }}/imagens/prompts.txt" target="_blank">Baixar todos os prompts (.txt)</a>
+    </p>
+
+    {% if not job_running %}
+      <form method="post" action="/projects/{{ project.id }}/imagens/gerar-tudo"
+            onsubmit="return confirm('Isso apaga TODOS os prompts atuais E o cache de personagens (a continuidade visual recomeça do zero), e gera tudo de novo recalculando quantas imagens cada cena precisa a partir da duração de áudio atual. Imagens já enviadas ficam órfãs. Continuar?');"
+            style="margin-bottom:1.25rem;">
+        <button class="btn secondary" type="submit">Gerar/Regenerar tudo do zero</button>
+      </form>
+    {% endif %}
+
+    <form method="post" action="/projects/{{ project.id }}/imagens/upload" enctype="multipart/form-data" style="margin-bottom:1.25rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+      <input type="file" name="files" multiple accept="image/*" style="flex:1;min-width:220px;">
+      <button class="btn" type="submit">Enviar imagens em lote</button>
+    </form>
+
+    {% for scene in scenes %}
+      {% set panels = panels_by_scene.get(scene.id, []) %}
+      {% if panels %}
+        <div class="card" style="margin-bottom:1rem;">
+          <h4 style="margin-top:0;">Cena {{ "%03d"|format(scene.order) }} — {{ scene.location }}</h4>
+          <form method="post" action="/projects/{{ project.id }}/scenes/{{ scene.id }}/imagens/gerar"
+                onsubmit="return confirm('Isso substitui os prompts desta cena (mantendo a mesma quantidade de painéis) e apaga as imagens já enviadas para ela. Continuar?');"
+                style="margin-bottom:0.75rem;">
+            <button class="btn secondary" type="submit" style="font-size:0.8rem;padding:0.3rem 0.6rem;">Regenerar prompts desta cena</button>
+          </form>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Enquadramento</th>
+                  <th>Prompt</th>
+                  <th>Imagem</th>
+                  <th>Enviar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for panel in panels %}
+                  <tr>
+                    <td>{{ "%03d"|format(panel.global_order) }}</td>
+                    <td>{{ panel.shot_type }}</td>
+                    <td style="max-width:260px;">
+                      {{ panel.prompt_text[:90] }}…
+                      <a href="/projects/{{ project.id }}/imagens/{{ panel.global_order }}/prompt.txt" target="_blank">ver completo</a>
+                    </td>
+                    <td>
+                      {% if panel.image_path %}
+                        <img src="/projects/{{ project.id }}/imagens/{{ panel.global_order }}/arquivo" style="max-width:100px;max-height:70px;border-radius:4px;">
+                      {% else %}
+                        <span class="step-pending"><span class="step-icon">○</span></span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <form method="post" action="/projects/{{ project.id }}/imagens/{{ panel.global_order }}/upload" enctype="multipart/form-data" style="display:flex;gap:0.3rem;">
+                        <input type="file" name="file" accept="image/*" style="max-width:120px;font-size:0.8rem;">
+                        <button class="btn secondary" type="submit" style="font-size:0.8rem;padding:0.3rem 0.5rem;">OK</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+</div>

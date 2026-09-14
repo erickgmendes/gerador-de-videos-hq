@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Produção Bíblica{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/vendor/htmx.min.js"></script>
+  <script src="/static/vendor/alpine.min.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <h1><a href="/" style="color:inherit;text-decoration:none;">Produção Bíblica</a></h1>
+    <nav class="app-nav">
+      <a href="/" class="{% if active_nav == 'dashboard' %}active{% endif %}">Projetos</a>
+      <a href="/settings" class="{% if active_nav == 'settings' %}active{% endif %}">Configurações</a>
+      <a href="/diagnostics" class="{% if active_nav == 'diagnostics' %}active{% endif %}">Diagnóstico</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Imagens — {{ project.name }} — Produção Bíblica{% endblock %}
+{% block content %}
+  <h2>{{ project.name }}</h2>
+  <div class="project-meta" style="margin-bottom:1rem;">{{ project.bible_reference }}</div>
+
+  {% include "partials/project_tabs.html" %}
+  {% include "partials/project_progress.html" %}
+
+  <div class="card">
+    <h3>Imagens</h3>
+    {% include "partials/imagens_status.html" %}
+  </div>
+{% endblock %}

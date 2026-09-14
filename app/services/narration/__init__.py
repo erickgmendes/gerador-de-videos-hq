@@ -1,0 +1,3 @@
+# Implementado na Fase 2: geração da narração + cenas.json a partir da
+# passagem bíblica, seguindo as regras das seções 12-13 e 17 da especificação
+# e o prompt detalhado em Documents/01. PROMPT PARA CRIAÇÃO DE ROTEIRO...

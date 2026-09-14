@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Diagnóstico — Produção Bíblica{% endblock %}
+{% block content %}
+  <h2>Diagnóstico do ambiente</h2>
+  <div class="card">
+    <ul class="check-list">
+      {% for check in checks %}
+        <li>
+          <span>{{ check.name }}<br><span class="project-meta">{{ check.detail }}</span></span>
+          <span class="badge {{ CHECK_BADGE_CLASS[check.level] }}">{{ CHECK_ICONS[check.level] }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

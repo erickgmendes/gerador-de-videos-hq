@@ -1,0 +1,38 @@
+# Ambiente Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+build/
+dist/
+
+# Segredos — nunca commitar
+.env
+
+# Dados de runtime — pertencem à máquina do usuário, nunca ao repositório
+/data/
+/projects/*
+!/projects/.gitkeep
+
+# Ferramentas / caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Claude Code (config/estado local da sessão, não faz parte do projeto)
+.claude/
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
+
+# Arquivos de SO
+.DS_Store
+Thumbs.db
+desktop.ini

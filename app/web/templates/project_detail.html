@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — Produção Bíblica{% endblock %}
+{% block content %}
+  <h2>{{ project.name }}</h2>
+  <div class="project-meta" style="margin-bottom:1rem;">{{ project.bible_reference }}</div>
+
+  {% set active_tab = "info" %}
+  {% include "partials/project_tabs.html" %}
+
+  {% include "partials/project_progress.html" %}
+
+  <div class="card">
+    <h3>Informações</h3>
+    <p><strong>Referência bíblica:</strong> {{ project.bible_reference }}</p>
+    <p><strong>Criado em:</strong> {{ project.created_at.strftime("%d/%m/%Y %H:%M") }}</p>
+    <p><strong>Última atualização:</strong> {{ project.updated_at.strftime("%d/%m/%Y %H:%M") }}</p>
+    <p><strong>Estado atual:</strong> {{ project.state.value }}</p>
+    <p style="margin-top:1rem;">
+      <a class="btn secondary" href="/projects/{{ project.id }}/passagem" target="_blank">Ver texto da passagem</a>
+      <a class="btn secondary" href="/projects/{{ project.id }}/biblia-visual" target="_blank">Ver Bíblia Visual</a>
+    </p>
+  </div>
+{% endblock %}

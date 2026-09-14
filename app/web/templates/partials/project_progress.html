@@ -1,0 +1,12 @@
+<div class="card">
+  <h3>Progresso geral</h3>
+  <div class="progress-bar"><span style="width: {{ project.progress }}%"></span></div>
+  <div class="steps">
+    {% for key in STEP_ORDER %}
+      {% set status = project.steps[key] %}
+      <span class="{{ STEP_CSS_CLASS[status] }}">
+        <span class="step-icon">{{ STEP_ICONS[status] }}</span>{{ STEP_LABELS[key] }}
+      </span>
+    {% endfor %}
+  </div>
+</div>

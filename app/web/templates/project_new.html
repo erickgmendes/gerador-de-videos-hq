@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Novo projeto — Produção Bíblica{% endblock %}
+{% block content %}
+  <h2>Novo projeto</h2>
+  <div class="card">
+    {% if error %}
+      <p class="badge badge-error" style="display:block;margin-bottom:1rem;">{{ error }}</p>
+    {% endif %}
+    <form method="post" action="/projects/new">
+      <div class="form-row">
+        <label for="name">Nome do projeto</label>
+        <input type="text" id="name" name="name" value="{{ form.name if form else '' }}" required>
+        <div class="form-hint">Ex.: "Evangelho — 13/09/2026". Usado no dashboard e no nome da pasta do projeto.</div>
+      </div>
+      <div class="form-row">
+        <label for="bible_reference">Referência bíblica</label>
+        <input type="text" id="bible_reference" name="bible_reference" value="{{ form.bible_reference if form else '' }}" required>
+        <div class="form-hint">Ex.: "Lucas 15:11-32".</div>
+      </div>
+      <div class="form-row">
+        <label for="passage_text">Texto completo da passagem</label>
+        <textarea id="passage_text" name="passage_text" required>{{ form.passage_text if form else '' }}</textarea>
+      </div>
+      <div class="form-row">
+        <label for="biblia_visual_text">Bíblia Visual dos Personagens (opcional)</label>
+        <textarea id="biblia_visual_text" name="biblia_visual_text">{{ form.biblia_visual_text if form else '' }}</textarea>
+        <div class="form-hint">Conteúdo do biblia-visual-personagens.md. Pode ser preenchido depois — fonte canônica da continuidade visual (seção 11).</div>
+      </div>
+      <button type="submit" class="btn">Criar projeto</button>
+      <a class="btn secondary" href="/">Cancelar</a>
+    </form>
+  </div>
+{% endblock %}

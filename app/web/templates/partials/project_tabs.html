@@ -1,0 +1,10 @@
+<div class="tabs">
+  {% for key, label, url_template in PROJECT_TABS %}
+    {% if url_template %}
+      <a href="{{ url_template.replace('{id}', project.id) }}"
+         class="{% if key == active_tab %}active{% endif %}">{{ label }}</a>
+    {% else %}
+      <a href="#" class="disabled">{{ label }} (Fase futura)</a>
+    {% endif %}
+  {% endfor %}
+</div>

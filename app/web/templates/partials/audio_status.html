@@ -1,0 +1,89 @@
+<div id="audio-status"
+     {% if project.state.value == 'audio_generating' %}
+     hx-get="/projects/{{ project.id }}/audio/status" hx-trigger="load delay:3s" hx-swap="outerHTML"
+     {% endif %}>
+  {% if not scenes %}
+    <p class="form-hint">Gere a narração primeiro (aba Narração) para depois gerar o áudio por cena.</p>
+  {% else %}
+    {% if project.state.value == 'audio_generating' %}
+      <p><span class="step-icon step-running">◉</span> Gerando áudio... esta página se atualiza sozinha.</p>
+    {% elif latest_job and latest_job.status == 'failed' %}
+      <p class="badge badge-error">⚠ Falha ao gerar áudio</p>
+      <p class="form-hint">{{ latest_job.error_message }}</p>
+      <form method="post" action="/projects/{{ project.id }}/audio/gerar">
+        <button class="btn" type="submit">Tentar novamente</button>
+      </form>
+    {% elif final_audio_ready %}
+      <p class="badge badge-ok">✓ Áudio completo — {{ scenes|length }} cenas</p>
+    {% elif all_scenes_ready %}
+      <p class="badge badge-ok">✓ Todas as cenas têm áudio — mesclando...</p>
+    {% else %}
+      <form method="post" action="/projects/{{ project.id }}/audio/gerar" style="margin-bottom:1rem;">
+        <button class="btn" type="submit">Gerar áudio</button>
+      </form>
+    {% endif %}
+
+    {% if final_audio_ready %}
+      <h4 style="margin-top:1.25rem;">Áudio final (narração completa)</h4>
+      <audio controls style="width:100%;margin-bottom:0.5rem;" src="/projects/{{ project.id }}/audio/narracao.mp3"></audio>
+      <p>
+        <a class="btn secondary" href="/projects/{{ project.id }}/audio/narracao.mp3" target="_blank">Abrir/baixar MP3</a>
+      </p>
+    {% endif %}
+
+    {% if project.state.value != 'audio_generating' %}
+      <form method="post" action="/projects/{{ project.id }}/audio/regenerar-tudo"
+            onsubmit="return confirm('Isso resintetiza o áudio de TODAS as cenas (mesmo as já prontas) e remescla o arquivo final. Continuar?');"
+            style="margin-top:0.5rem;">
+        <button class="btn secondary" type="submit">Gerar/Regenerar todo o áudio</button>
+      </form>
+    {% endif %}
+
+    <h4 style="margin-top:1.5rem;">Áudio por cena</h4>
+    <p class="form-hint" style="margin-bottom:0.5rem;">
+      Cada cena tem seu próprio arquivo — regenere só a que precisar, sem refazer as outras.
+    </p>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Trecho</th>
+            <th>Duração</th>
+            <th>Status</th>
+            <th>Áudio</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for scene in scenes %}
+            <tr>
+              <td>{{ "%03d"|format(scene.order) }}</td>
+              <td style="max-width:280px;">{{ scene.narration_excerpt[:80] }}{% if scene.narration_excerpt|length > 80 %}…{% endif %}</td>
+              <td>{% if scene.actual_duration %}{{ scene.actual_duration }}s{% else %}—{% endif %}</td>
+              <td>
+                {% if scene.actual_duration is not none %}
+                  <span class="step-success"><span class="step-icon">✓</span></span>
+                {% else %}
+                  <span class="step-pending"><span class="step-icon">○</span></span>
+                {% endif %}
+              </td>
+              <td>
+                {% if scene.actual_duration is not none %}
+                  <audio controls style="height:28px;max-width:180px;" src="/projects/{{ project.id }}/audio/cena/{{ scene.order }}.mp3"></audio>
+                {% endif %}
+              </td>
+              <td>
+                <form method="post" action="/projects/{{ project.id }}/scenes/{{ scene.id }}/audio/gerar">
+                  <button class="btn secondary" type="submit" style="font-size:0.8rem;padding:0.3rem 0.6rem;">
+                    {% if scene.actual_duration is not none %}Regenerar{% else %}Gerar{% endif %}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
