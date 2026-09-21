@@ -11,10 +11,13 @@ from tests.helpers import (
 )
 
 
-def _panel_response(count: int, new_characters: dict[str, str] | None = None) -> str:
+def _panel_response(
+    count: int, new_characters: dict[str, str] | None = None, new_locations: dict[str, str] | None = None
+) -> str:
     return json.dumps(
         {
             "new_characters": new_characters or {},
+            "new_locations": new_locations or {},
             "panels": [
                 {"shot_type": "medium shot", "description": f"Panel {i + 1} description."} for i in range(count)
             ],
@@ -185,20 +188,32 @@ def test_gerar_tudo_recalculates_panels_from_updated_audio_duration(app_client, 
 
 def test_gerar_tudo_also_clears_character_cache(app_client, monkeypatch):
     # Um reset completo precisa recomeçar a continuidade visual do zero —
-    # senão descrições de personagens de uma geração anterior continuam
-    # contaminando a nova (a mesma causa raiz do bug de continuidade).
+    # senão descrições de personagens/cenários de uma geração anterior
+    # continuam contaminando a nova (a mesma causa raiz do bug de
+    # continuidade).
     project_id = _setup_project_with_audio(app_client, monkeypatch)
-    fake_ai = FakeAIAdapter([_panel_response(1, {"Jesus": "a calm man"}), _panel_response(1, {"Simão": "a fisherman"})])
+    fake_ai = FakeAIAdapter(
+        [
+            _panel_response(1, {"Jesus": "a calm man"}, {"Temple Courtyard": "a stone courtyard"}),
+            _panel_response(1, {"Simão": "a fisherman"}),
+        ]
+    )
     monkeypatch.setattr(image_prompts_routes, "get_ai_adapter", lambda: fake_ai)
     app_client.post(f"/projects/{project_id}/imagens/gerar", follow_redirects=False)
 
-    from app.models.orm import Character
+    from app.models.orm import Character, Location
 
     db = get_test_db_session(app_client)
     assert {c.name for c in db.query(Character).filter(Character.project_id == project_id)} == {"Jesus", "Simão"}
+    assert {l.name for l in db.query(Location).filter(Location.project_id == project_id)} == {"Temple Courtyard"}
     db.close()
 
-    fake_ai_2 = FakeAIAdapter([_panel_response(1, {"Jesus": "a different look entirely"}), _panel_response(1, {"Simão": "also different"})])
+    fake_ai_2 = FakeAIAdapter(
+        [
+            _panel_response(1, {"Jesus": "a different look entirely"}, {"Temple Courtyard": "a different place"}),
+            _panel_response(1, {"Simão": "also different"}),
+        ]
+    )
     monkeypatch.setattr(image_prompts_routes, "get_ai_adapter", lambda: fake_ai_2)
     app_client.post(f"/projects/{project_id}/imagens/gerar-tudo", follow_redirects=False)
 
@@ -206,6 +221,11 @@ def test_gerar_tudo_also_clears_character_cache(app_client, monkeypatch):
     jesus_rows = db.query(Character).filter(Character.project_id == project_id, Character.name == "Jesus").all()
     assert len(jesus_rows) == 1  # não duplicou
     assert jesus_rows[0].visual_description == "a different look entirely"  # pegou a versão nova, não a antiga
+    courtyard_rows = db.query(Location).filter(
+        Location.project_id == project_id, Location.name == "Temple Courtyard"
+    ).all()
+    assert len(courtyard_rows) == 1
+    assert courtyard_rows[0].visual_description == "a different place"
     db.close()
 
 

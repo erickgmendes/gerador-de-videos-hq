@@ -20,7 +20,7 @@ from app.adapters.ai.base import AIProviderAdapter
 from app.config import Settings, get_settings
 from app.domain.errors import AIProviderError, DomainError, ImagePromptError
 from app.domain.states import ProjectState
-from app.models.orm import Character, ImagePrompt, Job, Project, Scene
+from app.models.orm import Character, ImagePrompt, Job, Location, Project, Scene
 from app.repositories.image_prompt_repository import ImagePromptRepository
 from app.repositories.scene_repository import SceneRepository
 from app.services.image_prompts.prompts import (
@@ -100,7 +100,9 @@ def _strip_code_fences(text: str) -> str:
     return match.group(1) if match else text
 
 
-def _parse_panel_response(raw_json: str, expected_panel_count: int) -> tuple[dict[str, str], list[dict]]:
+def _parse_panel_response(
+    raw_json: str, expected_panel_count: int
+) -> tuple[dict[str, str], dict[str, str], list[dict]]:
     try:
         data = json.loads(_strip_code_fences(raw_json))
     except json.JSONDecodeError as exc:
@@ -110,6 +112,7 @@ def _parse_panel_response(raw_json: str, expected_panel_count: int) -> tuple[dic
         raise ImagePromptError("A resposta da IA não veio no formato esperado (faltou 'panels').")
 
     new_characters = data.get("new_characters") or {}
+    new_locations = data.get("new_locations") or {}
     panels = data.get("panels") or []
     if not isinstance(panels, list) or len(panels) == 0:
         raise ImagePromptError("A IA não gerou nenhum painel para a cena.")
@@ -117,7 +120,7 @@ def _parse_panel_response(raw_json: str, expected_panel_count: int) -> tuple[dic
         # Tolerante: usa o que veio, mas não falha por uma diferença de
         # contagem — a IA pode arredondar de forma ligeiramente diferente.
         pass
-    return new_characters, panels
+    return new_characters, new_locations, panels
 
 
 def recompute_project_state(all_scenes: list[Scene], image_prompts: list[ImagePrompt]) -> str:
@@ -153,6 +156,7 @@ def _process_scene(
     settings: Settings,
     biblia_visual_text: str,
     character_cache: dict[str, str],
+    location_cache: dict[str, str],
     existing_panels: list[ImagePrompt],
     next_global_order: int,
     allocated_panel_count: int,
@@ -184,12 +188,13 @@ def _process_scene(
             panel_count=panel_count,
             scene_characters=scene.characters,
             known_characters=character_cache,
+            known_locations=location_cache,
             biblia_visual_text=biblia_visual_text,
         ),
         system=IMAGE_PROMPT_SYSTEM_PROMPT,
         max_tokens=PANEL_MAX_TOKENS,
     )
-    new_characters, panels = _parse_panel_response(response, panel_count)
+    new_characters, new_locations, panels = _parse_panel_response(response, panel_count)
 
     for name, description in new_characters.items():
         # Guarda contra a IA reenviar um personagem que já está no cache
@@ -202,6 +207,16 @@ def _process_scene(
             continue
         character_cache[name] = description
         db.add(Character(project_id=project_id, name=name, visual_description=description))
+
+    for name, description in new_locations.items():
+        # Mesma guarda que `new_characters` já usa, pelo mesmo motivo —
+        # sem ela, um cenário reenviado pela IA podia acabar com duas
+        # descrições diferentes e cenas voltando ao mesmo lugar com
+        # arquitetura/iluminação inconsistente entre si.
+        if name in location_cache:
+            continue
+        location_cache[name] = description
+        db.add(Location(project_id=project_id, name=name, visual_description=description))
 
     if is_regeneration:
         for panel_row, panel_data in zip(existing_panels, panels):
@@ -270,6 +285,7 @@ def run_image_prompts_job(
             image_prompt_repo = ImagePromptRepository(db)
             biblia_visual_text = project_storage.input_biblia_visual_path(project_id).read_text(encoding="utf-8")
             character_cache = {c.name: c.visual_description for c in db.query(Character).filter(Character.project_id == project_id)}
+            location_cache = {l.name: l.visual_description for l in db.query(Location).filter(Location.project_id == project_id)}
 
             if scene_ids is not None:
                 targets = [s for s in all_scenes if s.id in scene_ids]
@@ -303,6 +319,7 @@ def run_image_prompts_job(
                     settings,
                     biblia_visual_text,
                     character_cache,
+                    location_cache,
                     existing_panels,
                     next_global_order,
                     allocation.get(scene.id, 1),

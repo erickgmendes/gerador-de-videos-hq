@@ -226,6 +226,28 @@ descrição salva é reaproveitada literalmente. Sem isso, cada cena sendo
 uma chamada de IA independente faria "Jesus" sair descrito de um jeito
 na cena 3 e diferente na cena 7.
 
+**Cache de cenários entre cenas** (`locations`, mesmo mecanismo e mesmo
+motivo do cache de personagens acima, adicionado depois que o usuário
+relatou quebra de continuidade visual entre painéis): a IA reaproveita
+literalmente a descrição de um cenário já visto (ex.: "o templo" numa
+cena e "o Templo de Jerusalém" noutra são o mesmo lugar físico), em vez
+de redescrever arquitetura/iluminação do zero a cada cena que volta ao
+mesmo local.
+
+**Continuidade DENTRO da mesma cena**: o cache de personagens/cenários
+resolve a consistência *entre* cenas, mas não a de painéis *dentro* da
+mesma cena — como uma cena pode ter vários painéis (ver cálculo acima) e
+todos vêm da mesma chamada de IA, o `IMAGE_PROMPT_SYSTEM_PROMPT` agora
+instrui explicitamente que painéis da mesma cena são frames consecutivos
+de um único momento contínuo: roupa e cenário devem se repetir palavra
+por palavra entre eles, variando só pose/expressão/enquadramento — a
+menos que a ação da própria cena mude a roupa ou o local do personagem.
+Isso não resolve inconsistência introduzida pela ferramenta externa de
+geração de imagem em si (sem controle de seed/imagem de referência,
+texto idêntico ainda pode render diferente) — é um limite conhecido do
+fluxo atual (geração de imagem é externa — Meta Automation), não algo
+que o prompt sozinho garanta 100%.
+
 **Três bugs reais encontrados testando com o projeto real do usuário**
 (18 cenas, não só fixtures pequenas):
 1. `recompute_project_state` só olhava se as imagens já tinham sido

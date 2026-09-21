@@ -36,6 +36,7 @@ class Project(Base):
 
     scenes: Mapped[list["Scene"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     characters: Mapped[list["Character"]] = relationship(back_populates="project", cascade="all, delete-orphan")
+    locations: Mapped[list["Location"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     artifacts: Mapped[list["Artifact"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     jobs: Mapped[list["Job"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     image_prompts: Mapped[list["ImagePrompt"]] = relationship(back_populates="project", cascade="all, delete-orphan")
@@ -103,6 +104,25 @@ class Character(Base):
     active: Mapped[bool] = mapped_column(default=True)
 
     project: Mapped[Project] = relationship(back_populates="characters")
+
+
+class Location(Base):
+    """Cache de continuidade dos cenários, mesmo papel que `Character` tem
+    para personagens: a IA só descreve um local em detalhe na primeira
+    cena em que ele aparece; da segunda cena em diante (mesmo que citado
+    com um nome diferente — "o templo" vs. "o Templo de Jerusalém"), a
+    descrição salva é reaproveitada literalmente, evitando que o mesmo
+    cenário mude de arquitetura/iluminação de cena para cena."""
+
+    __tablename__ = "locations"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(200))
+    visual_description: Mapped[str] = mapped_column(Text, default="")
+    active: Mapped[bool] = mapped_column(default=True)
+
+    project: Mapped[Project] = relationship(back_populates="locations")
 
 
 class Artifact(Base):

@@ -11,7 +11,7 @@ from app.config import get_settings
 from app.db import get_db, get_session_factory
 from app.domain.errors import AIProviderError
 from app.domain.states import ProjectState
-from app.models.orm import Character, Job
+from app.models.orm import Character, Job, Location
 from app.repositories.image_prompt_repository import ImagePromptRepository
 from app.repositories.scene_repository import SceneRepository
 from app.services.image_prompts.service import compute_panel_count, recompute_project_state, run_image_prompts_job
@@ -155,11 +155,12 @@ def gerar_tudo_imagens(
         return RedirectResponse(url=f"/projects/{project_id}/imagens", status_code=303)
 
     ImagePromptRepository(db).delete_all_for_project(project_id)
-    # Limpa também o cache de personagens — senão descrições de uma
-    # geração anterior (possivelmente já reaproveitadas/duplicadas)
+    # Limpa também o cache de personagens e de cenários — senão descrições
+    # de uma geração anterior (possivelmente já reaproveitadas/duplicadas)
     # continuariam contaminando a geração nova. Um reset completo deve
     # recomeçar a continuidade visual do zero.
     db.query(Character).filter(Character.project_id == project_id).delete()
+    db.query(Location).filter(Location.project_id == project_id).delete()
     db.commit()
     _start_image_prompts_job(project_id, None, background_tasks, db, session_factory)
     return RedirectResponse(url=f"/projects/{project_id}/imagens", status_code=303)

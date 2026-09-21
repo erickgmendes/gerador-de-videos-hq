@@ -5,7 +5,7 @@ import pytest
 
 from app.adapters.ffmpeg.ffmpeg_adapter import FFmpegAdapter
 from app.domain.states import ProjectState
-from app.models.orm import Character, Job, Project, Scene
+from app.models.orm import Character, Job, Location, Project, Scene
 from app.repositories.image_prompt_repository import ImagePromptRepository
 from app.repositories.scene_repository import SceneRepository
 from app.schemas.project import ProjectCreate
@@ -69,10 +69,11 @@ def _create_image_prompts_job(db_session, project_id: str) -> Job:
     return job
 
 
-def _panel_response(count: int, new_characters: dict[str, str]) -> str:
+def _panel_response(count: int, new_characters: dict[str, str], new_locations: dict[str, str] | None = None) -> str:
     return json.dumps(
         {
             "new_characters": new_characters,
+            "new_locations": new_locations or {},
             "panels": [
                 {"shot_type": "medium shot", "description": f"Panel {i + 1} description."} for i in range(count)
             ],
@@ -248,6 +249,74 @@ def test_run_image_prompts_job_reuses_cached_character_description(db_session, d
     assert "PERSONAGENS JÁ DEFINIDOS" in second_call_message
     assert "PERSONAGENS MENCIONADOS NESTA CENA" in second_call_message
     assert "Simão" in second_call_message or "André" in second_call_message
+
+
+def test_run_image_prompts_job_caches_and_reuses_location_description(
+    db_session, db_session_factory, test_settings
+):
+    # Mesma lógica de continuidade já validada para personagens, agora
+    # para cenários — a cena 2 deve reaproveitar a descrição do templo
+    # gerada na cena 1, palavra por palavra, sem pedir de novo à IA.
+    project = _create_project_with_audio(db_session, db_session_factory)
+    scenes = SceneRepository(db_session).list_for_project(project.id)
+    scenes[0].actual_duration = 4.0
+    scenes[1].actual_duration = 4.0
+    db_session.commit()
+
+    job = _create_image_prompts_job(db_session, project.id)
+    ai = FakeAIAdapter(
+        [
+            _panel_response(1, {}, {"Temple of Jerusalem Courtyard": "an ancient stone courtyard with tall columns"}),
+            _panel_response(1, {}, {}),
+        ]
+    )
+    run_image_prompts_job(project.id, job.id, ai, db_session_factory)
+
+    verify = db_session_factory()
+    try:
+        locations = {
+            l.name: l.visual_description
+            for l in verify.query(Location).filter(Location.project_id == project.id)
+        }
+        assert locations == {"Temple of Jerusalem Courtyard": "an ancient stone courtyard with tall columns"}
+    finally:
+        verify.close()
+
+    second_call_message = ai.calls[1]["prompt"]
+    assert "an ancient stone courtyard with tall columns" in second_call_message
+    assert "CENÁRIOS JÁ DEFINIDOS" in second_call_message
+
+
+def test_run_image_prompts_job_ignores_redundant_new_location_from_ai(
+    db_session, db_session_factory, test_settings
+):
+    # Mesma guarda contra reenvio já validada para personagens, agora
+    # para cenários — não pode duplicar nem sobrescrever com uma segunda
+    # descrição diferente da primeira.
+    project = _create_project_with_audio(db_session, db_session_factory)
+    scenes = SceneRepository(db_session).list_for_project(project.id)
+    scenes[0].actual_duration = 4.0
+    scenes[1].actual_duration = 4.0
+    db_session.commit()
+
+    job = _create_image_prompts_job(db_session, project.id)
+    ai = FakeAIAdapter(
+        [
+            _panel_response(1, {}, {"Temple Courtyard": "an ancient stone courtyard"}),
+            _panel_response(1, {}, {"Temple Courtyard": "a completely different place"}),
+        ]
+    )
+    run_image_prompts_job(project.id, job.id, ai, db_session_factory)
+
+    verify = db_session_factory()
+    try:
+        rows = verify.query(Location).filter(
+            Location.project_id == project.id, Location.name == "Temple Courtyard"
+        ).all()
+        assert len(rows) == 1
+        assert rows[0].visual_description == "an ancient stone courtyard"
+    finally:
+        verify.close()
 
 
 def test_partial_generation_does_not_report_ready(db_session, db_session_factory, test_settings):
