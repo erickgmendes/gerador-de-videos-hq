@@ -46,23 +46,39 @@ acessados pelos services — nunca diretamente pelas rotas.
   gratuito a um teto de 8K TPM — ver nota na seção "Limite de
   tokens/minuto" abaixo, que hoje descreve uma limitação permanente, não
   mais contornável trocando de modelo dentro da Groq.
-- **IA/LLM — backup automático** (`app/adapters/ai/gemini_adapter.py`):
-  Google Gemini, também via API compatível com OpenAI
-  (`https://generativelanguage.googleapis.com/v1beta/openai/`). Chave em
-  `GEMINI_API_KEY`, modelo em `GEMINI_MODEL` (padrão `gemini-3.8-flash`)
-  — gratuito, sem cartão de crédito. `app/adapters/ai/get_ai_adapter()`
-  (`app/adapters/ai/__init__.py`) decide o que devolver: se as duas
-  chaves estiverem configuradas, envolve as duas num
-  `FallbackAIAdapter` (`app/adapters/ai/fallback_adapter.py`) — tenta a
-  Groq primeiro e só chama o Gemini se a Groq levantar `AIProviderError`
-  (chave ausente, limite de uso, erro de rede etc.); com só uma das duas
-  configuradas, usa aquela sozinha; sem nenhuma, levanta erro amigável.
-  Motivado por um caso real: o tier gratuito da Groq tem um teto diário
-  de requisições, e a geração de prompts de imagem de um projeto com
-  muitas cenas pode esgotá-lo no meio do processo. `GeminiAdapter` é um
-  arquivo próprio (não compartilha base com `GroqAdapter`) deliberadamente
-  — mesma filosofia de retry, mas isolado para não arriscar o adapter da
-  Groq, que já estava em produção quando o backup foi criado.
+- **IA/LLM — backup automático, até 3 níveis** (`app/adapters/ai/
+  gemini_adapter.py`, `openrouter_adapter.py`): `app/adapters/ai/
+  get_ai_adapter()` (`app/adapters/ai/__init__.py`) monta uma cadeia
+  ordenada com todo provedor que tiver chave configurada — Groq primeiro,
+  Gemini em seguida, OpenRouter por último — e envolve os que estiverem
+  configurados (2 ou 3) num `FallbackAIAdapter`
+  (`app/adapters/ai/fallback_adapter.py`, generalizado de 2 para N
+  adapters quando o terceiro nível foi adicionado): tenta cada um na
+  ordem, só passa pro próximo se o atual levantar `AIProviderError`
+  (chave ausente, limite de uso, erro de rede etc.); com só um
+  configurado, usa aquele sozinho; sem nenhum, levanta erro amigável.
+  - **Gemini** (`GEMINI_API_KEY`/`GEMINI_MODEL`, padrão `gemini-3.8-flash`),
+    via API compatível com OpenAI
+    (`https://generativelanguage.googleapis.com/v1beta/openai/`) —
+    gratuito, sem cartão. Backup de uso normal: motivado por um caso
+    real, o tier gratuito da Groq tem um teto diário de requisições (e,
+    desde 21/09/2026, um teto de 8K TPM — ver nota abaixo), e a geração
+    de prompts de imagem de um projeto com muitas cenas pode esgotá-lo no
+    meio do processo; o tier gratuito do Gemini gira em torno de 250K TPM,
+    cobrindo a lacuna na prática.
+  - **OpenRouter** (`OPENROUTER_API_KEY`/`OPENROUTER_MODEL`, padrão
+    `openrouter/free` — o roteador da própria
+    OpenRouter entre os modelos gratuitos disponíveis, não um modelo
+    fixo), via `https://openrouter.ai/api/v1` — adicionado a pedido do
+    usuário como terceiro nível "só por segurança", não como backup de
+    uso normal: o tier gratuito é baixo demais (50 requisições/dia no
+    total, não por modelo, conferido ao vivo em 2026) pra sustentar o
+    volume de chamadas deste app — só entra em ação no cenário raro de
+    Groq E Gemini falharem ao mesmo tempo.
+  - Cada adapter é um arquivo próprio (não compartilham base) — mesma
+    filosofia de retry entre os três, mas isolados deliberadamente, para
+    que um adapter novo (ou uma peculiaridade de erro de um provedor)
+    nunca arrisque os que já estavam em produção.
 - **Gerenciamento de chaves** (`app/services/settings_service.py`): a
   tela Configurações permite colar/atualizar cada chave direto pela UI —
   grava no `.env` local (nunca no banco, nunca em log) e limpa o cache de

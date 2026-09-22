@@ -52,6 +52,18 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.8-flash"
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
+    # IA backup de terceiro nível, só "por segurança" (pedido do usuário) —
+    # entra em ação só se Groq E Gemini falharem ao mesmo tempo (ver
+    # app/adapters/ai/__init__.py). Tier gratuito da OpenRouter é baixo
+    # demais (50 requisições/dia no total, conferido ao vivo em 2026) para
+    # ser um backup de uso normal, por isso não substitui o Gemini, só
+    # cobre o caso raro dos dois primeiros falharem juntos. `openrouter/free`
+    # não é um modelo específico — é o roteador da própria OpenRouter que
+    # escolhe entre os modelos gratuitos disponíveis no momento.
+    openrouter_api_key: str | None = None
+    openrouter_model: str = "openrouter/free"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+
     # TTS (Fase 3) — edge-tts, gratuito, sem API key, precisa de internet.
     tts_voice: str = "pt-BR-AntonioNeural"
     tts_rate: str = "-4%"

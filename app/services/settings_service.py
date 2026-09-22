@@ -61,6 +61,28 @@ _SECRET_FIELD_DEFS: list[dict] = [
             "verifique em aistudio.google.com/apikey se ficar sem cota."
         ),
     },
+    {
+        "key": "OPENROUTER_API_KEY",
+        "label": "Chave da API da OpenRouter (backup de emergência)",
+        "category": "IA",
+        "help_text": (
+            "Opcional. Terceiro nível de backup — só é usado se Groq E Gemini falharem ao mesmo "
+            "tempo. Gratuito, sem cartão de crédito, mas com cota bem menor que os outros dois "
+            "(50 requisições/dia no total); não configure isto no lugar do Gemini, só como reforço."
+        ),
+        "is_configured": lambda settings: bool(settings.openrouter_api_key),
+        "how_to_get": [
+            'Acesse <a href="https://openrouter.ai" target="_blank" rel="noopener">openrouter.ai</a> e crie uma conta gratuita — não pede cartão de crédito.',
+            'Vá em <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Settings → API Keys</a>.',
+            'Clique em "Create Key", dê um nome (ex.: "producao-biblica") e confirme.',
+            "Copie a chave gerada.",
+            "Cole a chave no campo abaixo e clique em Salvar.",
+        ],
+        "extra_note": (
+            "Cota diária bem apertada (50 requisições/dia no total, não por modelo) — serve só "
+            "como último recurso, não como backup de uso normal."
+        ),
+    },
 ]
 
 KNOWN_SECRET_KEYS = {field["key"] for field in _SECRET_FIELD_DEFS}

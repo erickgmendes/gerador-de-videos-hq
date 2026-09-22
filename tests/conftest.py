@@ -32,7 +32,15 @@ def test_settings(tmp_path, monkeypatch):
     # de verdade (ex. tests/unit/test_settings_service.py) sobrescrevem de
     # novo por cima disto.
     monkeypatch.setattr(app_config, "get_env_file_path", lambda: tmp_path / "unused.env")
-    for key in ("GROQ_API_KEY", "GROQ_MODEL", "GEMINI_API_KEY", "GEMINI_MODEL", "YOUTUBE_CLIENT_SECRET_FILE"):
+    for key in (
+        "GROQ_API_KEY",
+        "GROQ_MODEL",
+        "GEMINI_API_KEY",
+        "GEMINI_MODEL",
+        "OPENROUTER_API_KEY",
+        "OPENROUTER_MODEL",
+        "YOUTUBE_CLIENT_SECRET_FILE",
+    ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()
     settings = get_settings()
