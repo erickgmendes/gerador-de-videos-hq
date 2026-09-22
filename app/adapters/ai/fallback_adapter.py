@@ -17,12 +17,14 @@ class FallbackAIAdapter:
         self._primary = primary
         self._secondary = secondary
 
-    def complete(self, prompt: str, *, system: str | None = None, max_tokens: int = 4096) -> str:
+    def complete(
+        self, prompt: str, *, system: str | None = None, max_tokens: int = 4096, json_mode: bool = False
+    ) -> str:
         try:
-            return self._primary.complete(prompt, system=system, max_tokens=max_tokens)
+            return self._primary.complete(prompt, system=system, max_tokens=max_tokens, json_mode=json_mode)
         except AIProviderError as primary_error:
             try:
-                return self._secondary.complete(prompt, system=system, max_tokens=max_tokens)
+                return self._secondary.complete(prompt, system=system, max_tokens=max_tokens, json_mode=json_mode)
             except AIProviderError as secondary_error:
                 raise AIProviderError(
                     f"IA principal falhou ({primary_error}) e o backup também falhou ({secondary_error})."

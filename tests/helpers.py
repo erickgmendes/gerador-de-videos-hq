@@ -60,15 +60,19 @@ class FakeAIAdapter:
         self._responses = list(responses)
         self.calls: list[dict] = []
 
-    def complete(self, prompt: str, *, system: str | None = None, max_tokens: int = 4096) -> str:
-        self.calls.append({"prompt": prompt, "system": system, "max_tokens": max_tokens})
+    def complete(
+        self, prompt: str, *, system: str | None = None, max_tokens: int = 4096, json_mode: bool = False
+    ) -> str:
+        self.calls.append({"prompt": prompt, "system": system, "max_tokens": max_tokens, "json_mode": json_mode})
         if not self._responses:
             raise AssertionError("FakeAIAdapter esgotou as respostas configuradas")
         return self._responses.pop(0)
 
 
 class FailingAIAdapter:
-    def complete(self, prompt: str, *, system: str | None = None, max_tokens: int = 4096) -> str:
+    def complete(
+        self, prompt: str, *, system: str | None = None, max_tokens: int = 4096, json_mode: bool = False
+    ) -> str:
         raise AIProviderError("Chave inválida (simulado)")
 
 

@@ -84,6 +84,13 @@ main {
   border: 1px solid var(--accent);
 }
 
+.btn.danger {
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+  margin-top: 1rem;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

@@ -193,6 +193,7 @@ def _process_scene(
         ),
         system=IMAGE_PROMPT_SYSTEM_PROMPT,
         max_tokens=PANEL_MAX_TOKENS,
+        json_mode=True,
     )
     new_characters, new_locations, panels = _parse_panel_response(response, panel_count)
 

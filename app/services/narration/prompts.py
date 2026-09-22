@@ -87,6 +87,42 @@ clímax, consequência, encerramento e uma breve reflexão final coerente \
 com a passagem — sem forçar essa estrutura quando não for adequada, e \
 sem transformar a reflexão em um sermão longo.
 
+ABERTURA E ENCERRAMENTO DO VÍDEO
+O roteiro é narração de um vídeo, não só um texto lido — por isso \
+precisa de uma abertura breve e um encerramento breve, além da \
+introdução/reflexão narrativas descritas acima. As frases de saudação \
+inicial e de agradecimento final são FIXAS e inseridas automaticamente \
+pelo sistema (não pela IA) — a Narração da CENA 1 sempre vai começar, \
+já pronto, com "Bem-vindo, querido espectador." e a Narração da ÚLTIMA \
+cena sempre vai terminar, já pronto, com "Obrigado pela sua companhia." \
+Por isso:
+- NÃO escreva nenhuma saudação própria ("bem-vindo", "olá", "seja \
+  bem-vindo" etc.) no início da CENA 1 — comece direto pelo conteúdo \
+  descrito no próximo item, que será colado logo depois da saudação fixa.
+- No início da Narração da CENA 1, escreva de 1 a 3 frases curtas \
+  preparando o clima para a leitura que vem a seguir (ex.: convidar a se \
+  acomodar, silenciar o celular, mergulhar na história), antes de \
+  começar a contar a história em si. Mesmo tom solene e reverente do \
+  restante do roteiro — nunca comercial, apressado ou fora do clima \
+  bíblico. Não invente nome de canal, autor ou qualquer identificação \
+  que não foi fornecida.
+- NÃO escreva nenhum agradecimento/despedida própria ("obrigado por \
+  assistir", "até a próxima" etc.) no final da última cena — termine seu \
+  texto no convite descrito no próximo item; o agradecimento fixo será \
+  colado logo depois.
+- No final da Narração da ÚLTIMA cena, depois da reflexão final, \
+  acrescente de 2 a 4 frases curtas de encerramento convidando o \
+  espectador a curtir o vídeo, se inscrever no canal, compartilhar com \
+  alguém que também gostaria de ouvir essa história, e deixar um \
+  comentário (pode ser um convite específico relacionado à passagem, \
+  ex.: pedir para contar nos comentários o que a mensagem significou \
+  para essa pessoa). Mesmo tom solene do resto do roteiro — nunca soe \
+  como propaganda.
+- Essas frases de abertura/encerramento fazem parte do texto que será \
+  narrado (contam para a duração total) — não são um bloco separado, \
+  não levam rótulo próprio, e não aparecem em nenhuma outra cena além \
+  da primeira e da última.
+
 DURAÇÃO
 Aproximadamente 2.400 a 3.000 palavras no total. Não prolongue \
 artificialmente a história só para atingir a quantidade — quando a \
@@ -94,9 +130,11 @@ passagem for curta, desenvolva ambientação, contexto, transições e \
 emoções presentes no próprio texto, nunca acontecimentos novos.
 
 SAÍDA
-Entregue SOMENTE o roteiro, já dividido em cenas no formato acima. Não \
-inclua análise da passagem, explicações, comentários técnicos, prompts \
-de imagem ou instruções para o narrador.\
+Entregue SOMENTE o roteiro, já dividido em cenas no formato acima \
+(incluindo a abertura dentro da Narração da CENA 1 e o encerramento \
+dentro da Narração da última cena, como descrito acima). Não inclua \
+análise da passagem, explicações, comentários técnicos, prompts de \
+imagem ou instruções para o narrador.\
 """
 
 

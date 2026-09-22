@@ -18,6 +18,11 @@
     <p style="margin-top:1rem;">
       <a class="btn secondary" href="/projects/{{ project.id }}/passagem" target="_blank">Ver texto da passagem</a>
       <a class="btn secondary" href="/projects/{{ project.id }}/biblia-visual" target="_blank">Ver Bíblia Visual</a>
+      <a class="btn secondary" href="/projects/{{ project.id }}/editar">Editar projeto</a>
     </p>
+    <form method="post" action="/projects/{{ project.id }}/excluir"
+          onsubmit="return confirm('Excluir este projeto? Isso apaga narração, áudio, imagens e todo o restante já gerado, sem volta.');">
+      <button type="submit" class="btn danger">Excluir projeto</button>
+    </form>
   </div>
 {% endblock %}

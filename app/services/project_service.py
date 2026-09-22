@@ -17,7 +17,7 @@ from app.domain.errors import ProjectNotFoundError, ValidationError
 from app.domain.states import ProjectState, progress_percent, step_statuses
 from app.models.orm import Project
 from app.repositories.project_repository import ProjectRepository
-from app.schemas.project import ProjectCreate, ProjectSummary
+from app.schemas.project import ProjectCreate, ProjectSummary, ProjectUpdate
 from app.storage import project_storage
 
 
@@ -33,13 +33,17 @@ class ProjectService:
         self.db = db
         self.repo = ProjectRepository(db)
 
-    def create_project(self, data: ProjectCreate) -> Project:
-        if not data.name.strip():
+    @staticmethod
+    def _validate_required_fields(name: str, bible_reference: str, passage_text: str) -> None:
+        if not name.strip():
             raise ValidationError("Informe um nome para o projeto.")
-        if not data.bible_reference.strip():
+        if not bible_reference.strip():
             raise ValidationError("Informe a referência bíblica.")
-        if not data.passage_text.strip():
+        if not passage_text.strip():
             raise ValidationError("Informe o texto completo da passagem.")
+
+    def create_project(self, data: ProjectCreate) -> Project:
+        self._validate_required_fields(data.name, data.bible_reference, data.passage_text)
 
         project_id = _generate_project_id(data.name)
         while project_storage.project_exists(project_id):
@@ -85,6 +89,44 @@ class ProjectService:
 
     def get_project_summary(self, project_id: str) -> ProjectSummary:
         return self._to_summary(self.get_project(project_id))
+
+    def update_project(self, project_id: str, data: ProjectUpdate) -> Project:
+        """Atualiza nome, referência, texto da passagem e Bíblia Visual.
+        `id` (e a pasta em disco) nunca mudam — foram gerados uma vez na
+        criação e estão embutidos em toda URL/artefato do projeto; trocar
+        exigiria mover a pasta inteira e quebraria links já visitados.
+        Não re-executa nenhuma etapa já gerada (narração, áudio, imagens)
+        — quem editar a passagem/Bíblia Visual depois de já ter narração
+        pronta precisa regenerar manualmente para o texto novo valer."""
+        self._validate_required_fields(data.name, data.bible_reference, data.passage_text)
+        project = self.get_project(project_id)
+
+        project_storage.input_passagem_path(project_id).write_text(data.passage_text, encoding="utf-8")
+        if data.biblia_visual_text is not None:
+            project_storage.input_biblia_visual_path(project_id).write_text(
+                data.biblia_visual_text, encoding="utf-8"
+            )
+
+        metadata_path = project_storage.project_json_path(project_id)
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8")) if metadata_path.exists() else {}
+        metadata.update(
+            {
+                "id": project_id,
+                "name": data.name,
+                "bible_reference": data.bible_reference,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        project.name = data.name
+        project.bible_reference = data.bible_reference
+        return self.repo.save(project)
+
+    def delete_project(self, project_id: str) -> None:
+        project = self.get_project(project_id)
+        self.repo.delete(project)
+        project_storage.delete_project_tree(project_id)
 
     @staticmethod
     def _to_summary(project: Project) -> ProjectSummary:

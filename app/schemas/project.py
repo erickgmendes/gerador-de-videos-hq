@@ -18,6 +18,18 @@ class ProjectCreate(BaseModel):
     biblia_visual_text: str | None = None
 
 
+class ProjectUpdate(BaseModel):
+    """Estrutura de entrada para edição de projeto — mesmos campos de
+    ProjectCreate (não dá pra editar `id`/pasta: é gerado uma vez na
+    criação e usado em toda URL do projeto, trocar quebraria links e
+    exigiria mover a pasta em disco)."""
+
+    name: str = ""
+    bible_reference: str = ""
+    passage_text: str = ""
+    biblia_visual_text: str | None = None
+
+
 class ProjectSummary(BaseModel):
     id: str
     name: str

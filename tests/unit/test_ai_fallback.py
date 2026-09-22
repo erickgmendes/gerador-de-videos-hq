@@ -62,7 +62,7 @@ def test_fallback_forwards_system_and_max_tokens():
 
     fallback.complete("oi", system="regras", max_tokens=123)
 
-    primary.complete.assert_called_once_with("oi", system="regras", max_tokens=123)
+    primary.complete.assert_called_once_with("oi", system="regras", max_tokens=123, json_mode=False)
 
 
 def test_get_ai_adapter_returns_groq_when_only_groq_configured(test_settings, monkeypatch):

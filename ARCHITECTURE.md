@@ -36,11 +36,16 @@ acessados pelos services — nunca diretamente pelas rotas.
 - **IA/LLM** (Fase 2): Groq (GroqCloud) é a IA principal, via API
   compatível com OpenAI (`app/adapters/ai/groq_adapter.py`, usa o pacote
   `openai` apontado para `https://api.groq.com/openai/v1`). Chave em
-  `GROQ_API_KEY`, modelo em `GROQ_MODEL` (padrão `groq/compound`, 70K
-  tokens/min no tier gratuito e sem overhead de "reasoning tokens") —
-  gratuita, sem cartão de crédito; escolha do usuário, não Anthropic/Claude
-  nem xAI/Grok (fácil de confundir "Groq" com "Grok" — são empresas
-  diferentes).
+  `GROQ_API_KEY`, modelo em `GROQ_MODEL` (padrão `openai/gpt-oss-120b`)
+  — gratuita, sem cartão de crédito; escolha do usuário, não
+  Anthropic/Claude nem xAI/Grok (fácil de confundir "Groq" com "Grok" —
+  são empresas diferentes). O padrão original era `groq/compound`
+  (escolhido pelo teto de 70K tokens/min no tier gratuito, bem maior que
+  o resto); a Groq descontinuou esse modelo em 21/09/2026 (chamadas a ele
+  passaram a devolver 404) e reduziu TODOS os modelos restantes do tier
+  gratuito a um teto de 8K TPM — ver nota na seção "Limite de
+  tokens/minuto" abaixo, que hoje descreve uma limitação permanente, não
+  mais contornável trocando de modelo dentro da Groq.
 - **IA/LLM — backup automático** (`app/adapters/ai/gemini_adapter.py`):
   Google Gemini, também via API compatível com OpenAI
   (`https://generativelanguage.googleapis.com/v1beta/openai/`). Chave em
@@ -166,12 +171,23 @@ durante o desenvolvimento — os modelos `openai/gpt-oss-*` e `qwen/*`
 compartilham um teto de 8K TPM no tier gratuito, insuficiente até para
 uma única narração completa (uma narração de ~2.700 palavras já consome
 uns 10-12K tokens contando o "raciocínio" interno desses modelos de
-reasoning). Por isso o modelo padrão é `groq/compound` (teto de 8192 em
-`max_tokens` por chamada, mas 70K TPM) — cabe a narração inteira numa
-chamada e ainda sobra orçamento para a chamada de enriquecimento logo em
-seguida. Mesmo assim, duas chamadas em sequência podem esbarrar no
-limite; `GroqAdapter` (`app/adapters/ai/groq_adapter.py`) tenta de novo
-automaticamente (até 2 vezes, aguardando ~25s) antes de reportar erro.
+reasoning). O modelo padrão original driblava isso usando `groq/compound`
+(teto de 8192 em `max_tokens` por chamada, mas 70K TPM) — cabia a
+narração inteira numa chamada e ainda sobrava orçamento para a chamada
+de enriquecimento logo em seguida. A Groq descontinuou `groq/compound`
+em 21/09/2026; **não existe mais nenhum modelo no tier gratuito da Groq
+com teto acima de 8K TPM** — ou seja, o problema que motivou a escolha
+do `compound` voltou a existir, sem alternativa dentro da própria Groq.
+Isso também afeta a Fase 4 (prompts de imagem): cada chamada por cena
+inclui o texto inteiro da Bíblia Visual do projeto, que facilmente passa
+de 8K tokens sozinho. Por isso o backup via `GEMINI_API_KEY`
+(`app/adapters/ai/fallback_adapter.py`, tier gratuito do Gemini gira em
+torno de 250K TPM) deixou de ser um "nice-to-have" — sem ele configurado,
+Groq sozinha esbarra no limite com frequência tanto na narração quanto
+nos prompts de imagem. `GroqAdapter` (`app/adapters/ai/groq_adapter.py`)
+ainda tenta de novo automaticamente (até 2 vezes, aguardando ~25s) antes
+de reportar erro ou cair para o backup, mas isso amortece picos
+pontuais, não substitui ter o Gemini configurado.
 
 ### Geração de áudio (Fase 3)
 
@@ -288,6 +304,16 @@ externos (Fases 3+) sempre via `subprocess.run(args: list[str])`, nunca
 
 1. **Fundação** (concluída) — estrutura, backend, frontend, banco, criação
    de projetos, dashboard, persistência, configuração, diagnóstico básico.
+   Edição e exclusão de projeto (`ProjectService.update_project`/
+   `delete_project`, adicionadas depois, fora do plano de fases original a
+   pedido do usuário) nunca mudam `Project.id` — o id é gerado uma vez na
+   criação (slug do nome + data + sufixo aleatório) e vira o nome da pasta
+   em `./projects` e parte de toda URL do projeto; editar o nome depois
+   não renomeia a pasta nem muda links já visitados. Excluir apaga a linha
+   do banco (cascata via `cascade="all, delete-orphan"` cuida de cenas,
+   jobs, personagens, cenários, prompts de imagem e artifacts) e depois a
+   pasta inteira do projeto em disco — nessa ordem, para nunca ficar com
+   arquivos órfãos se o passo do banco falhar no meio.
 2. **IA: narração + `cenas.json`** (concluída) — geração via Groq,
    parsing determinístico de cenas, enriquecimento estrutural, aba
    Narração com acompanhamento em tempo real e retomada após reinício.

@@ -8,4 +8,6 @@ from typing import Protocol
 
 
 class AIProviderAdapter(Protocol):
-    def complete(self, prompt: str, *, system: str | None = None, max_tokens: int = 4096) -> str: ...
+    def complete(
+        self, prompt: str, *, system: str | None = None, max_tokens: int = 4096, json_mode: bool = False
+    ) -> str: ...

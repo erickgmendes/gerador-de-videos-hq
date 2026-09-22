@@ -26,13 +26,35 @@ from app.services.narration.prompts import (
     build_narration_user_message,
     build_scene_extraction_user_message,
 )
-from app.services.narration.scene_parser import RawScene, parse_scene_blocks
+from app.services.narration.scene_parser import RawScene, estimate_duration_seconds, parse_scene_blocks
 from app.storage import project_storage
 
-# 8192 é o teto de max_tokens do groq/compound (modelo padrão, ver
-# app/config.py) — pedir mais do que isso é rejeitado com 400.
+# 8192 cabe dentro do teto de output do modelo padrão (ver app/config.py)
+# — mas já é maior que o teto de 8K TPM do tier gratuito da Groq
+# (ver ARCHITECTURE.md), então narrações longas dependem do backup via
+# GEMINI_API_KEY para não esbarrar em rate limit.
 NARRATION_MAX_TOKENS = 8192
 EXTRACTION_MAX_TOKENS = 4096
+
+# Frases fixas de abertura/encerramento do vídeo (pedido do usuário: texto
+# exato, sempre igual, nunca parafraseado pela IA) — montadas aqui pelo
+# código e coladas na Narração da primeira/última cena, mesma filosofia já
+# usada nos blocos fixos de estilo dos prompts de imagem (ver
+# app/services/image_prompts/prompts.py). O system prompt (NARRATION_
+# SYSTEM_PROMPT) já instrui a IA a NÃO escrever sua própria saudação/
+# agradecimento final, só o conteúdo em volta — para não duplicar.
+VIDEO_GREETING = "Bem-vindo, querido espectador."
+VIDEO_CLOSING = "Obrigado pela sua companhia."
+
+
+def _splice_greeting_and_closing(raw_scenes: list[RawScene]) -> None:
+    if not raw_scenes:
+        return
+    first, last = raw_scenes[0], raw_scenes[-1]
+    first.narration = f"{VIDEO_GREETING} {first.narration}"
+    first.estimated_duration = estimate_duration_seconds(first.narration)
+    last.narration = f"{last.narration} {VIDEO_CLOSING}"
+    last.estimated_duration = estimate_duration_seconds(last.narration)
 
 
 def _strip_code_fences(text: str) -> str:
@@ -145,6 +167,7 @@ def run_narration_job(
                     "A narração foi gerada e salva, mas não foi possível identificar as cenas "
                     "automaticamente (a IA não seguiu o formato esperado). Tente gerar novamente."
                 )
+            _splice_greeting_and_closing(raw_scenes)
 
             enrichment_raw = ai.complete(
                 build_scene_extraction_user_message(

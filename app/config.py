@@ -33,11 +33,16 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{(BASE_DIR / 'data' / 'app.db').as_posix()}"
 
     groq_api_key: str | None = None
-    # groq/compound tem limite de tokens/minuto (TPM) bem maior no tier
-    # gratuito que os modelos gpt-oss/qwen (70K vs 8K) — necessário para
-    # caber uma narração de ~2.700 palavras + a chamada de enriquecimento
-    # de cenas em sequência sem estourar o limite (confirmado ao vivo).
-    groq_model: str = "groq/compound"
+    # groq/compound (escolhido originalmente pelo teto de 70K tokens/min no
+    # tier gratuito, bem maior que os 8K dos modelos gpt-oss/qwen) foi
+    # descontinuado pela Groq em 21/09/2026 — chamadas a ele agora
+    # devolvem 404. TODOS os modelos restantes do tier gratuito
+    # compartilham o teto de 8K TPM, insuficiente até para uma única
+    # narração (ver ARCHITECTURE.md). Por isso o backup via GEMINI_API_KEY
+    # (`app/adapters/ai/fallback_adapter.py`, tier gratuito do Gemini tem
+    # ~250K TPM) deixou de ser opcional na prática — sem ele, a Groq
+    # sozinha esbarra no limite com frequência.
+    groq_model: str = "openai/gpt-oss-120b"
     groq_base_url: str = "https://api.groq.com/openai/v1"
 
     # IA backup (Fase 2+) — usada automaticamente se a Groq falhar (chave

@@ -94,3 +94,31 @@ def test_complete_raises_friendly_error_when_response_is_empty(adapter):
 
     with pytest.raises(AIProviderError, match="não retornou conteúdo"):
         adapter.complete("oi")
+
+
+def test_complete_does_not_request_json_mode_by_default(adapter):
+    # Regressão: chamadas de texto livre (ex.: narração) não podem ganhar
+    # response_format/extra_body — só as que pedem JSON explicitamente.
+    adapter._client.chat.completions.create.return_value = _make_completion("texto livre")
+
+    adapter.complete("oi")
+
+    _, kwargs = adapter._client.chat.completions.create.call_args
+    assert "response_format" not in kwargs
+    assert "extra_body" not in kwargs
+
+
+def test_complete_requests_json_mode_and_hides_reasoning_when_asked(adapter):
+    # Regressão: relatado pelo usuário com dados reais — modelos de
+    # reasoning (padrão desde a saída do groq/compound) vazavam texto de
+    # raciocínio no conteúdo, quebrando o json.loads de quem chama
+    # (ver app/services/image_prompts/service.py). response_format
+    # json_object + reasoning_format "hidden" evita isso.
+    adapter._client.chat.completions.create.return_value = _make_completion('{"ok": true}')
+
+    result = adapter.complete("oi", json_mode=True)
+
+    assert result == '{"ok": true}'
+    _, kwargs = adapter._client.chat.completions.create.call_args
+    assert kwargs["response_format"] == {"type": "json_object"}
+    assert kwargs["extra_body"] == {"reasoning_format": "hidden"}

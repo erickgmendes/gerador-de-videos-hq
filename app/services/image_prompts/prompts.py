@@ -36,7 +36,11 @@ cena, verifique se ele já corresponde a alguém na lista de personagens
 já definidos — pelo papel na história e pelo contexto, não só pelo texto
 exato do nome. Se corresponder, use a descrição EXISTENTE
 PALAVRA POR PALAVRA nos painéis desta cena — não a reescreva, não a
-resuma, não mude nenhum detalhe (idade, roupa, cor, altura...), e NÃO
+resuma, não mude ABSOLUTAMENTE NENHUM detalhe: nem idade, nem altura,
+nem tipo físico, nem tom de pele, nem cor/estilo/penteado do cabelo, nem
+padrão de barba, nem quantidade/posição de rugas no rosto e nas mãos,
+nem peça de roupa, nem cor de roupa, nem tecido, nem calçado, nem
+nenhum acessório (joias, cinto, cocar, bolsa, cajado, arma etc.) — e NÃO
 inclua esse nome em "new_characters". Só crie uma descrição nova para um
 personagem que genuinamente ainda não existe na lista.
 
@@ -68,18 +72,39 @@ enquadramento/ângulo de câmera ("shot_type"). Nunca mude cor de roupa,
 estilo de roupa, iluminação geral ou elementos arquitetônicos de um
 painel para o outro dentro da mesma cena sem justificativa na ação.
 
+REGRA IGUALMENTE IMPORTANTE — ESCALA E PROPORÇÃO ENTRE PERSONAGENS:
+Todos os personagens, incluindo seres celestiais/anjos, devem manter uma
+disposição de tamanho humana normal e crível entre si — nunca um
+gigante ao lado de pessoas de tamanho comum. Todo personagem (novo ou já
+definido) tem uma altura aparente declarada na sua descrição (ex.: "1,88
+m", "aproximadamente 1,70 m"); use SEMPRE essa altura declarada para
+calcular a proporção correta entre os personagens presentes no mesmo
+painel — a diferença de tamanho retratada na imagem deve refletir
+fielmente a diferença de altura declarada entre eles (ex.: alguém 15-20
+cm mais alto aparece só ligeiramente maior, nunca duas ou três vezes
+maior). Seres celestiais podem ter presença/imponência maior por
+postura, iluminação e enquadramento — nunca por estarem literalmente
+gigantescos em relação aos demais personagens do painel.
+
 OUTRAS REGRAS (baseadas na Bíblia visual dos personagens, quando fornecida):
 - Para personagens genuinamente novos: crie uma descrição visual
-  completa e coerente com o contexto histórico/bíblico — sexo, idade
-  aparente, altura, tipo físico, tom de pele, rosto, olhos, cabelo,
-  barba (quando aplicável), roupas, cores, tecidos, calçados, acessórios.
-  Não invente características extravagantes; a escolha deve parecer
-  natural dentro do mundo bíblico retratado. As proporções corporais
-  devem ser anatomicamente realistas e humanas — nunca descreva ou
-  sugira braços, antebraços ou mãos alongados/maiores que o normal.
-  Escreva em inglês. Dê a ele um nome canônico único (evite variações
-  como "Anjo X" numa cena e só "X" noutra — prefira sempre o nome mais
-  específico e completo).
+  completa e coerente com o contexto histórico/bíblico, cobrindo SEMPRE
+  todos estes itens (nunca deixe nenhum implícito ou "a critério da
+  ferramenta de imagem"): sexo, idade aparente, altura aparente em
+  metros (dentro da faixa humana normal, salvo ser explicitamente
+  sobre-humano), tipo físico, tom de pele, formato de rosto, olhos,
+  cor e penteado exatos do cabelo, barba (estilo e comprimento, quando
+  aplicável), rugas/marcas de idade no rosto e nas mãos (localização e
+  intensidade, se o personagem for idoso — ou "sem rugas visíveis" se
+  for jovem), e TODAS as peças de roupa com cor e tecido exatos, calçado,
+  e todo acessório (joias, cinto, cocar, bolsa, cajado, arma etc., ou
+  "nenhum acessório" se não usar nenhum). Não invente características
+  extravagantes; a escolha deve parecer natural dentro do mundo bíblico
+  retratado. As proporções corporais devem ser anatomicamente realistas
+  e humanas — nunca descreva ou sugira braços, antebraços ou mãos
+  alongados/maiores que o normal. Escreva em inglês. Dê a ele um nome
+  canônico único (evite variações como "Anjo X" numa cena e só "X"
+  noutra — prefira sempre o nome mais específico e completo).
 - Para cenários genuinamente novos: crie uma descrição visual completa
   do local — arquitetura, materiais, cores, época do dia, iluminação,
   clima, objetos e elementos de fundo característicos. Escreva em
@@ -200,11 +225,15 @@ _NEGATIVE_BLOCK = (
     "Negative prompt: photorealism, modern clothing, modern objects, modern architecture, "
     "contemporary fashion, modern technology, anime, manga, 3D CGI, plastic-looking characters, "
     "inconsistent facial features, inconsistent age, inconsistent body proportions, different "
-    "hair color, different eye color, incorrect beard, incorrect clothing, historically "
-    "inaccurate clothing, malformed anatomy, extra limbs, malformed hands, distorted faces, "
-    "elongated limbs, elongated arms, elongated forearms, stretched limbs, oversized hands, "
-    "oversized forearms, undersized head, disproportionate body parts, incorrect limb-to-body "
-    "ratio, unnaturally long arms, unnaturally long hands, gigantism, "
+    "hair color, different hairstyle, different eye color, incorrect beard, inconsistent beard, "
+    "inconsistent wrinkles, inconsistent aging marks, incorrect clothing, inconsistent clothing "
+    "color, inconsistent clothing style, missing accessories, extra accessories, inconsistent "
+    "accessories, historically inaccurate clothing, malformed anatomy, extra limbs, malformed "
+    "hands, distorted faces, elongated limbs, elongated arms, elongated forearms, stretched "
+    "limbs, oversized hands, oversized forearms, undersized head, disproportionate body parts, "
+    "incorrect limb-to-body ratio, unnaturally long arms, unnaturally long hands, gigantism, "
+    "character scale mismatch, oversized character compared to others, undersized character "
+    "compared to others, inconsistent character height ratio between characters in the same panel, "
     "duplicated characters, text, letters, numbers, words, speech balloons, thought balloons, "
     "captions, narration boxes, subtitles, title, signs, inscriptions, logos, watermark, "
     "signature, typography."

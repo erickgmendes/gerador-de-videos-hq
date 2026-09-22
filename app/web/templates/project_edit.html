@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Editar {{ project.name }} — Produção Bíblica{% endblock %}
+{% block content %}
+  <h2>Editar projeto</h2>
+  <div class="card">
+    {% if error %}
+      <p class="badge badge-error" style="display:block;margin-bottom:1rem;">{{ error }}</p>
+    {% endif %}
+    {% if project.state != "created" %}
+      <p class="badge badge-warning" style="display:block;margin-bottom:1rem;">
+        Este projeto já tem etapas geradas. Alterar o texto da passagem ou a Bíblia Visual aqui
+        não reescreve narração, áudio ou imagens já prontos — regenere manualmente o que precisar
+        depois de salvar.
+      </p>
+    {% endif %}
+    <form method="post" action="/projects/{{ project.id }}/editar">
+      <div class="form-row">
+        <label for="name">Nome do projeto</label>
+        <input type="text" id="name" name="name" value="{{ form.name if form else '' }}" required>
+      </div>
+      <div class="form-row">
+        <label for="bible_reference">Referência bíblica</label>
+        <input type="text" id="bible_reference" name="bible_reference" value="{{ form.bible_reference if form else '' }}" required>
+      </div>
+      <div class="form-row">
+        <label for="passage_text">Texto completo da passagem</label>
+        <textarea id="passage_text" name="passage_text" required>{{ form.passage_text if form else '' }}</textarea>
+      </div>
+      <div class="form-row">
+        <label for="biblia_visual_text">Bíblia Visual dos Personagens (opcional)</label>
+        <textarea id="biblia_visual_text" name="biblia_visual_text">{{ form.biblia_visual_text if form else '' }}</textarea>
+      </div>
+      <button type="submit" class="btn">Salvar alterações</button>
+      <a class="btn secondary" href="/projects/{{ project.id }}">Cancelar</a>
+    </form>
+  </div>
+{% endblock %}

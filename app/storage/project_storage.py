@@ -7,6 +7,7 @@ diretórios (seção 8 da especificação) consistente em todo o sistema.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from app.config import get_settings
@@ -38,6 +39,14 @@ def create_project_tree(project_id: str) -> Path:
 
 def project_exists(project_id: str) -> bool:
     return project_root(project_id).is_dir()
+
+
+def delete_project_tree(project_id: str) -> None:
+    """Remove a pasta inteira do projeto (áudio, imagens, roteiro etc.) —
+    contraparte de `create_project_tree`. Silencioso se a pasta já não
+    existir (chamado depois de apagar a linha do banco; não pode falhar a
+    exclusão só porque os arquivos já sumiram)."""
+    shutil.rmtree(project_root(project_id), ignore_errors=True)
 
 
 def input_passagem_path(project_id: str) -> Path:

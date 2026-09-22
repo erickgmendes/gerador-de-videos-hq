@@ -89,7 +89,9 @@ class _PanelCountEchoAIAdapter:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def complete(self, prompt: str, *, system: str | None = None, max_tokens: int = 4096) -> str:
+    def complete(
+        self, prompt: str, *, system: str | None = None, max_tokens: int = 4096, json_mode: bool = False
+    ) -> str:
         self.calls.append(prompt)
         match = re.search(r"QUANTIDADE DE PAINÉIS A GERAR:\s*(\d+)", prompt)
         count = int(match.group(1)) if match else 1

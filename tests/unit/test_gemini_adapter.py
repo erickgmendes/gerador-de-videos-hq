@@ -93,3 +93,22 @@ def test_complete_raises_friendly_error_when_response_is_empty(adapter):
 
     with pytest.raises(AIProviderError, match="não retornou conteúdo"):
         adapter.complete("oi")
+
+
+def test_complete_does_not_request_json_mode_by_default(adapter):
+    adapter._client.chat.completions.create.return_value = _make_completion("texto livre")
+
+    adapter.complete("oi")
+
+    _, kwargs = adapter._client.chat.completions.create.call_args
+    assert "response_format" not in kwargs
+
+
+def test_complete_requests_json_mode_when_asked(adapter):
+    adapter._client.chat.completions.create.return_value = _make_completion('{"ok": true}')
+
+    result = adapter.complete("oi", json_mode=True)
+
+    assert result == '{"ok": true}'
+    _, kwargs = adapter._client.chat.completions.create.call_args
+    assert kwargs["response_format"] == {"type": "json_object"}

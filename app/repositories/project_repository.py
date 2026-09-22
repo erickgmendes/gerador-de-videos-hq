@@ -31,3 +31,10 @@ class ProjectRepository:
         self.db.commit()
         self.db.refresh(project)
         return project
+
+    def delete(self, project: Project) -> None:
+        # cascade="all, delete-orphan" nas relationships de Project (ver
+        # app/models/orm.py) apaga cenas, jobs, personagens, cenários,
+        # prompts de imagem e artifacts junto, numa unidade só.
+        self.db.delete(project)
+        self.db.commit()

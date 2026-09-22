@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.domain.errors import ValidationError
-from app.schemas.project import ProjectCreate
+from app.schemas.project import ProjectCreate, ProjectUpdate
 from app.services.project_service import ProjectService
 from app.storage import project_storage
 from app.web.templating import templates
@@ -74,3 +74,55 @@ def project_biblia_visual_text(project_id: str, db: Session = Depends(get_db)):
     ProjectService(db).get_project(project_id)
     path = project_storage.input_biblia_visual_path(project_id)
     return PlainTextResponse(path.read_text(encoding="utf-8"))
+
+
+@router.get("/projects/{project_id}/editar")
+def edit_project_form(request: Request, project_id: str, db: Session = Depends(get_db)):
+    project = ProjectService(db).get_project(project_id)  # 404 se não existir
+    form = {
+        "name": project.name,
+        "bible_reference": project.bible_reference,
+        "passage_text": project_storage.input_passagem_path(project_id).read_text(encoding="utf-8"),
+        "biblia_visual_text": project_storage.input_biblia_visual_path(project_id).read_text(encoding="utf-8"),
+    }
+    return templates.TemplateResponse(
+        request, "project_edit.html", {"project": project, "active_nav": "dashboard", "error": None, "form": form}
+    )
+
+
+@router.post("/projects/{project_id}/editar")
+def update_project(
+    request: Request,
+    project_id: str,
+    name: str = Form(""),
+    bible_reference: str = Form(""),
+    passage_text: str = Form(""),
+    biblia_visual_text: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    project = ProjectService(db).get_project(project_id)  # 404 se não existir
+    form = {
+        "name": name,
+        "bible_reference": bible_reference,
+        "passage_text": passage_text,
+        "biblia_visual_text": biblia_visual_text,
+    }
+    try:
+        data = ProjectUpdate(
+            name=name, bible_reference=bible_reference, passage_text=passage_text, biblia_visual_text=biblia_visual_text
+        )
+        ProjectService(db).update_project(project_id, data)
+    except ValidationError as exc:
+        return templates.TemplateResponse(
+            request,
+            "project_edit.html",
+            {"project": project, "active_nav": "dashboard", "error": str(exc), "form": form},
+            status_code=400,
+        )
+    return RedirectResponse(url=f"/projects/{project_id}", status_code=303)
+
+
+@router.post("/projects/{project_id}/excluir")
+def delete_project(project_id: str, db: Session = Depends(get_db)):
+    ProjectService(db).delete_project(project_id)  # 404 se não existir
+    return RedirectResponse(url="/", status_code=303)
