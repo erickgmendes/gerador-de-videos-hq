@@ -50,13 +50,22 @@ acessados pelos services — nunca diretamente pelas rotas.
   gemini_adapter.py`, `openrouter_adapter.py`): `app/adapters/ai/
   get_ai_adapter()` (`app/adapters/ai/__init__.py`) monta uma cadeia
   ordenada com todo provedor que tiver chave configurada — Groq primeiro,
-  Gemini em seguida, OpenRouter por último — e envolve os que estiverem
-  configurados (2 ou 3) num `FallbackAIAdapter`
-  (`app/adapters/ai/fallback_adapter.py`, generalizado de 2 para N
-  adapters quando o terceiro nível foi adicionado): tenta cada um na
-  ordem, só passa pro próximo se o atual levantar `AIProviderError`
-  (chave ausente, limite de uso, erro de rede etc.); com só um
-  configurado, usa aquele sozinho; sem nenhum, levanta erro amigável.
+  Gemini em seguida, OpenRouter por último — e **sempre** envolve num
+  `FallbackAIAdapter` (`app/adapters/ai/fallback_adapter.py`), mesmo
+  quando só 1 provedor está configurado (nesse caso a cadeia tem 1 item
+  só, mas ainda se beneficia da segunda passada abaixo). Cada adapter
+  individual faz só UMA tentativa por chamada — quem decide tentar de
+  novo é o `FallbackAIAdapter`, tentando o **próximo provedor da cadeia
+  imediatamente** em caso de falha, em vez de insistir no mesmo. Se a
+  cadeia INTEIRA falhar numa primeira passada, espera ~20s e tenta de
+  novo (até 2 passadas completas) antes de desistir de vez. Design
+  revisto depois de um caso real do usuário: a versão anterior fazia cada
+  adapter tentar 3x com ~25s de espera ANTES de sequer tentar o backup —
+  com Groq no limite de uso e Gemini sobrecarregado ao mesmo tempo, isso
+  significava mais de 1 minuto de espera só pra descobrir que os dois
+  primeiros estavam mesmo fora, quando o próximo provedor da cadeia
+  (ou uma segunda passada mais rápida) tinha uma chance real de responder
+  na hora.
   - **Gemini** (`GEMINI_API_KEY`/`GEMINI_MODEL`, padrão `gemini-3.8-flash`),
     via API compatível com OpenAI
     (`https://generativelanguage.googleapis.com/v1beta/openai/`) —
@@ -200,10 +209,26 @@ de 8K tokens sozinho. Por isso o backup via `GEMINI_API_KEY`
 (`app/adapters/ai/fallback_adapter.py`, tier gratuito do Gemini gira em
 torno de 250K TPM) deixou de ser um "nice-to-have" — sem ele configurado,
 Groq sozinha esbarra no limite com frequência tanto na narração quanto
-nos prompts de imagem. `GroqAdapter` (`app/adapters/ai/groq_adapter.py`)
-ainda tenta de novo automaticamente (até 2 vezes, aguardando ~25s) antes
-de reportar erro ou cair para o backup, mas isso amortece picos
-pontuais, não substitui ter o Gemini configurado.
+nos prompts de imagem. `FallbackAIAdapter` (`app/adapters/ai/
+fallback_adapter.py`) pula pro próximo provedor configurado assim que a
+Groq falhar (ver seção "Camadas" acima) — mas isso só ajuda de verdade se
+houver um próximo provedor pra pular; sem o Gemini configurado, a Groq
+sozinha ainda esbarra no limite com frequência.
+
+**Segundo caso real, ainda mais específico**: mesmo com o Gemini
+configurado, um projeto com Bíblia Visual grande (~29KB medidos ao vivo,
+~7-8K tokens sozinha, mandada por INTEIRO em toda chamada — ver seção
+"Prompts de imagem" abaixo) faz a Groq falhar por tamanho em praticamente
+toda cena, sobrando pro Gemini segurar o lote inteiro sozinho. Isso não é
+mais um problema de tokens (o tier gratuito do Gemini gira em torno de
+250K TPM, folgado) — é um problema de **requisições por minuto**: o tier
+gratuito do Gemini também tem um teto de ~10 req/min, bem menor que o de
+tokens, e um projeto de 10 cenas dispara até 10 chamadas em sequência
+rápida (sem pausa nenhuma entre cenas, ver `run_image_prompts_job`).
+Corrigido com `Settings.image_prompt_scene_pause_seconds` (padrão 7s) —
+uma pausa deliberada ENTRE cenas (não por tentativa de IA, isso já não
+existe mais, ver acima), mantendo o lote inteiro bem abaixo de 10/min
+mesmo no pior caso.
 
 ### Geração de áudio (Fase 3)
 
@@ -300,6 +325,48 @@ que o prompt sozinho garanta 100%.
    real já salvo (painéis gerados com sucesso antes da interrupção).
    Agora chama `recompute_project_state` de verdade para este job_type.
 
+### Prompts de vídeo (Fase 5)
+
+**Decisão deliberada: sem IA.** Diferente de todas as fases anteriores
+que envolvem texto gerado, o usuário pediu explicitamente um prompt
+genérico de animação — "não precisa se atentar a detalhes, porque a
+imagem por si só já possui os elementos visuais". `app/services/
+video_prompts/prompts.py` monta um texto **fixo**, idêntico para todo
+painel, sem nenhuma chamada de IA: pede movimento sutil e cinematográfico
+(câmera lenta, respiração, vento, partículas de luz) preservando
+exatamente personagens/roupas/cenário/estilo já definidos pela imagem, um
+bloco de restrição de tom ("nem aloprar" — nunca uma cena de ação), e um
+negative prompt pedido explicitamente contra atividades ilícitas,
+conteúdo sexual e uso de drogas — com uma exceção também explícita para
+vinho (bebida historicamente normal na época, não deve ser tratado como
+proibido).
+
+Consequência dessa decisão: `app/services/video_prompts/service.py` roda
+**síncrono**, dentro da própria requisição HTTP — não é um `Job` em
+background como as fases anteriores. Sem IA, preencher o prompt de
+dezenas de painéis é uma operação de milissegundos; construir toda a
+infraestrutura de job/spinner/polling só para isso seria complexidade sem
+benefício real (esse é o motivo de existir o padrão de job em primeiro
+lugar — chamadas de IA lentas e sujeitas a rate limit, que aqui não
+existem).
+
+**Reaproveita `ImagePrompt`, não uma tabela nova**: a relação painel↔vídeo
+é 1:1 (cada painel já ilustrado ganha exatamente um vídeo), sem a
+dimensão cena→vários-painéis que motivou `ImagePrompt` ser separado de
+`Scene` na Fase 4 — por isso `video_prompt_text`/`video_path`/
+`video_uploaded_at` são só colunas a mais na mesma linha (migração
+`665a79b5a541`), e `ImagePromptRepository` é reaproveitado sem alterações.
+Upload (`app/services/video_prompts/upload.py`) e as rotas espelham a
+Fase 4 quase literalmente (mesmo mecanismo de casar pelo número no nome
+do arquivo, mesma exportação `.txt` separada por linha em branco), só sem
+IA nem cache de continuidade — não há nada a manter consistente entre
+painéis, cada vídeo anima só a imagem que já foi aprovada na Fase 4.
+
+`recompute_project_state` (em `video_prompts/service.py`, mesma filosofia
+da Fase 4) exige que **todos** os painéis já tenham imagem enviada antes
+de permitir gerar os prompts de vídeo — gerar/enviar vídeo por painel
+individual antes disso não é uma operação suportada pela UI.
+
 ## Fluxo de estados
 
 Duas dimensões deliberadas (ver `app/domain/states.py`):
@@ -341,7 +408,11 @@ externos (Fases 3+) sempre via `subprocess.run(args: list[str])`, nunca
    (concluída) — cálculo de painéis por duração, cache de personagens,
    exportação `.txt`, upload em lote com associação por nome de arquivo
    e upload individual de correção.
-5. Prompts de vídeo + upload + associação a cenas.
+5. **Prompts de vídeo + upload + associação a painéis** (concluída) —
+   prompt fixo de animação sem IA (a pedido do usuário), geração síncrona
+   (sem job em background), exportação `.txt`, upload em lote com
+   associação por nome de arquivo e upload individual de correção — ver
+   seção "Prompts de vídeo (Fase 5)" acima.
 6. FFmpeg: sincronização, montagem, transições.
 7. Player, revisão por cena, substituição, remontagem.
 8. YouTube: autenticação, upload, publicação, registro.

@@ -55,7 +55,7 @@ PROJECT_TABS: list[tuple[str, str, str | None]] = [
     ("narracao", "Narração", "/projects/{id}/narracao"),
     ("audio", "Áudio", "/projects/{id}/audio"),
     ("imagens", "Imagens", "/projects/{id}/imagens"),
-    ("videos", "Vídeos", None),
+    ("videos", "Vídeos", "/projects/{id}/videos"),
     ("montagem", "Montagem", None),
     ("revisao", "Revisão", None),
     ("youtube", "YouTube", None),

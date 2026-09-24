@@ -47,6 +47,8 @@ def get_ai_adapter() -> AIProviderAdapter:
             "(e opcionalmente OPENROUTER_API_KEY) no arquivo .env (ou na tela de Configurações) "
             "e reinicie a aplicação."
         )
-    if len(adapters) == 1:
-        return adapters[0]
+    # Sempre envolve em FallbackAIAdapter, mesmo com um só provedor
+    # configurado — é ele quem decide tentar de novo (ver
+    # fallback_adapter.py), então mesmo uma cadeia de 1 se beneficia da
+    # segunda passada depois de uma falha transitória.
     return FallbackAIAdapter(adapters)

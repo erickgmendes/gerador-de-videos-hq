@@ -1,0 +1,84 @@
+<div id="videos-status">
+  {% if not image_prompts %}
+    <p class="form-hint">Gere e envie as imagens primeiro (aba Imagens).</p>
+  {% elif not all_images_ready %}
+    <p class="form-hint">Nem todos os painéis têm imagem enviada ainda — termine o upload na aba Imagens primeiro.</p>
+  {% elif not prompts_generated %}
+    <p class="form-hint" style="margin-bottom:0.5rem;">
+      {{ image_prompts|length }} painéis com imagem pronta para animar. O prompt de animação é o mesmo para
+      todos (a própria imagem já tem os elementos visuais) — só a duração sugerida do clipe muda com a
+      configuração do projeto.
+    </p>
+    <form method="post" action="/projects/{{ project.id }}/videos/gerar">
+      <button class="btn" type="submit">Gerar prompts de vídeo</button>
+    </form>
+  {% else %}
+    <p class="badge {% if missing_count == 0 %}badge-ok{% else %}badge-warning{% endif %}">
+      {% if missing_count == 0 %}✓ Todos os {{ image_prompts|length }} vídeos recebidos{% else %}⚠ {{ image_prompts|length - missing_count }}/{{ image_prompts|length }} vídeos recebidos — faltam {{ missing_count }}{% endif %}
+    </p>
+
+    <p style="margin:0.75rem 0;">
+      <a class="btn secondary" href="/projects/{{ project.id }}/videos/prompts.txt" target="_blank">Baixar todos os prompts (.txt)</a>
+    </p>
+
+    <form method="post" action="/projects/{{ project.id }}/videos/gerar-tudo"
+          onsubmit="return confirm('Isso apaga os prompts de vídeo atuais E os vídeos já enviados, gerando tudo de novo do zero. Continuar?');"
+          style="margin-bottom:1.25rem;">
+      <button class="btn secondary" type="submit">Gerar/Regenerar tudo do zero</button>
+    </form>
+
+    <form method="post" action="/projects/{{ project.id }}/videos/upload" enctype="multipart/form-data" style="margin-bottom:1.25rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+      <input type="file" name="files" multiple accept="video/*" style="flex:1;min-width:220px;">
+      <button class="btn" type="submit">Enviar vídeos em lote</button>
+    </form>
+
+    {% for scene in scenes %}
+      {% set panels = panels_by_scene.get(scene.id, []) %}
+      {% if panels %}
+        <div class="card" style="margin-bottom:1rem;">
+          <h4 style="margin-top:0;">Cena {{ "%03d"|format(scene.order) }} — {{ scene.location }}</h4>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Imagem</th>
+                  <th>Prompt</th>
+                  <th>Vídeo</th>
+                  <th>Enviar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for panel in panels %}
+                  <tr>
+                    <td>{{ "%03d"|format(panel.global_order) }}</td>
+                    <td>
+                      <img src="/projects/{{ project.id }}/imagens/{{ panel.global_order }}/arquivo" style="max-width:90px;max-height:60px;border-radius:4px;">
+                    </td>
+                    <td style="max-width:220px;">
+                      {{ panel.video_prompt_text[:80] }}…
+                      <a href="/projects/{{ project.id }}/videos/{{ panel.global_order }}/prompt.txt" target="_blank">ver completo</a>
+                    </td>
+                    <td>
+                      {% if panel.video_path %}
+                        <video src="/projects/{{ project.id }}/videos/{{ panel.global_order }}/arquivo" controls style="max-width:120px;max-height:80px;border-radius:4px;"></video>
+                      {% else %}
+                        <span class="step-pending"><span class="step-icon">○</span></span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <form method="post" action="/projects/{{ project.id }}/videos/{{ panel.global_order }}/upload" enctype="multipart/form-data" style="display:flex;gap:0.3rem;">
+                        <input type="file" name="file" accept="video/*" style="max-width:120px;font-size:0.8rem;">
+                        <button class="btn secondary" type="submit" style="font-size:0.8rem;padding:0.3rem 0.5rem;">OK</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+</div>

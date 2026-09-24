@@ -13,23 +13,22 @@ modelos gratuitos disponíveis no momento e já filtra por suporte a
 "structured outputs" — evita depender de um único modelo gratuito fixo,
 que a OpenRouter roda/remove da lista sem aviso.
 
-Estrutura e comportamento de retry propositalmente iguais aos outros dois
-adapters (mesma filosofia de rate limit transitório), mantidos em arquivo
-próprio pelo mesmo motivo de isolamento já documentado em
+Estrutura propositalmente igual aos outros dois adapters, mantida em
+arquivo próprio pelo mesmo motivo de isolamento já documentado em
 gemini_adapter.py.
 """
 
 from __future__ import annotations
 
-import time
-
 import openai
 
 from app.domain.errors import AIProviderError
 
+# 429 é limite de uso; usado só para escolher a mensagem de erro amigável
+# certa — não para decidir se tenta de novo aqui dentro (isso é
+# responsabilidade de app/adapters/ai/fallback_adapter.py, tentando o
+# próximo provedor da cadeia em vez de insistir no mesmo).
 _RATE_LIMIT_STATUS_CODES = {429}
-_MAX_ATTEMPTS = 3
-_RETRY_WAIT_SECONDS = 25
 
 
 class OpenRouterAdapter:
@@ -50,7 +49,7 @@ class OpenRouterAdapter:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        response = self._create_with_retry(messages, max_tokens, json_mode)
+        response = self._create(messages, max_tokens, json_mode)
 
         choice = response.choices[0] if response.choices else None
         text = choice.message.content if choice and choice.message else None
@@ -58,30 +57,28 @@ class OpenRouterAdapter:
             raise AIProviderError("A IA (OpenRouter) não retornou conteúdo de texto.")
         return text
 
-    def _create_with_retry(self, messages: list[dict[str, str]], max_tokens: int, json_mode: bool):
+    def _create(self, messages: list[dict[str, str]], max_tokens: int, json_mode: bool):
         extra: dict = {}
         if json_mode:
             extra["response_format"] = {"type": "json_object"}
-        for attempt in range(1, _MAX_ATTEMPTS + 1):
-            try:
-                return self._client.chat.completions.create(
-                    model=self._model,
-                    max_tokens=max_tokens,
-                    messages=messages,
-                    **extra,
-                )
-            except openai.AuthenticationError as exc:
-                raise AIProviderError("Chave de API da OpenRouter inválida ou não configurada.") from exc
-            except openai.APIConnectionError as exc:
-                raise AIProviderError("Não foi possível conectar à API da OpenRouter. Verifique sua conexão.") from exc
-            except openai.APIStatusError as exc:
-                is_rate_limit = exc.status_code in _RATE_LIMIT_STATUS_CODES
-                if is_rate_limit and attempt < _MAX_ATTEMPTS:
-                    time.sleep(_RETRY_WAIT_SECONDS)
-                    continue
-                if is_rate_limit:
-                    raise AIProviderError(
-                        "Limite de uso gratuito da OpenRouter atingido. Tente novamente em instantes."
-                    ) from exc
-                raise AIProviderError(f"Erro no serviço de IA (OpenRouter), código {exc.status_code}.") from exc
-        raise AssertionError("unreachable")  # loop sempre retorna ou levanta
+        try:
+            return self._client.chat.completions.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=messages,
+                **extra,
+            )
+        except openai.AuthenticationError as exc:
+            raise AIProviderError("Chave de API da OpenRouter inválida ou não configurada.") from exc
+        except openai.APIConnectionError as exc:
+            raise AIProviderError("Não foi possível conectar à API da OpenRouter. Verifique sua conexão.") from exc
+        except openai.APIStatusError as exc:
+            if exc.status_code == 503:
+                raise AIProviderError(
+                    "Nenhum modelo gratuito da OpenRouter disponível no momento. Tente novamente em instantes."
+                ) from exc
+            if exc.status_code in _RATE_LIMIT_STATUS_CODES:
+                raise AIProviderError(
+                    "Limite de uso gratuito da OpenRouter atingido. Tente novamente em instantes."
+                ) from exc
+            raise AIProviderError(f"Erro no serviço de IA (OpenRouter), código {exc.status_code}.") from exc

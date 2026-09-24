@@ -82,6 +82,18 @@ class Settings(BaseSettings):
     # recebendo mais painéis que as curtas, só numa escala menor).
     max_image_prompts: int = 50
 
+    # Pausa entre a chamada de IA de uma cena e a da próxima (Fase 4).
+    # Motivado por um caso real do usuário: um projeto com Bíblia Visual
+    # grande (a Bíblia Visual inteira vai em toda chamada) faz a Groq
+    # falhar por tamanho em praticamente toda cena, sobrando pro Gemini
+    # aguentar sozinho o lote inteiro — mas o tier gratuito do Gemini
+    # também tem um teto de ~10 requisições/minuto, bem menor que o de
+    # tokens. Sem essa pausa, um projeto de 10 cenas dispara até 10
+    # chamadas em sequência rápida e estoura esse teto mesmo com o
+    # conteúdo cabendo tranquilamente no limite de tokens. 7s mantém uma
+    # boa margem abaixo de 10/min mesmo COM alguma variação de latência.
+    image_prompt_scene_pause_seconds: float = 7.0
+
     youtube_client_secret_file: Path | None = None
 
     def ensure_directories(self) -> None:

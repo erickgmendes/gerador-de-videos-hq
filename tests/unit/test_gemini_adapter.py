@@ -1,8 +1,8 @@
-"""Testa o retry/tratamento de erro do GeminiAdapter contra um cliente OpenAI
-mockado — sem chamar a API de verdade e sem esperas reais (time.sleep é
-mockado). Espelha tests/unit/test_groq_adapter.py; a única diferença de
-comportamento é que o Gemini só trata 429 como rate limit transitório
-(a Groq também trata 413) — ver app/adapters/ai/gemini_adapter.py.
+"""Testa o tratamento de erro do GeminiAdapter contra um cliente OpenAI
+mockado — sem chamar a API de verdade. Espelha
+tests/unit/test_groq_adapter.py; cada chamada tenta só UMA vez (o retry
+entre provedores vive em fallback_adapter.py, não aqui) — ver
+app/adapters/ai/gemini_adapter.py.
 """
 
 from __future__ import annotations
@@ -32,8 +32,7 @@ def _make_completion(text: str):
 
 
 @pytest.fixture()
-def adapter(monkeypatch):
-    monkeypatch.setattr("app.adapters.ai.gemini_adapter.time.sleep", lambda seconds: None)
+def adapter():
     instance = GeminiAdapter(api_key="test-key", model="gemini-3.8-flash")
     instance._client = MagicMock()
     return instance
@@ -47,28 +46,29 @@ def test_complete_returns_text_on_success(adapter):
     assert result == "olá mundo"
 
 
-def test_complete_retries_once_on_rate_limit_then_succeeds(adapter):
-    adapter._client.chat.completions.create.side_effect = [
-        _api_status_error(429),
-        _make_completion("funcionou na segunda tentativa"),
-    ]
-
-    result = adapter.complete("oi")
-
-    assert result == "funcionou na segunda tentativa"
-    assert adapter._client.chat.completions.create.call_count == 2
-
-
-def test_complete_gives_up_after_max_attempts_with_friendly_message(adapter):
+def test_complete_raises_friendly_error_on_rate_limit_without_retrying(adapter):
     adapter._client.chat.completions.create.side_effect = _api_status_error(429)
 
     with pytest.raises(AIProviderError, match="Limite de uso gratuito"):
         adapter.complete("oi")
 
-    assert adapter._client.chat.completions.create.call_count == 3
+    assert adapter._client.chat.completions.create.call_count == 1
 
 
-def test_complete_does_not_retry_non_rate_limit_status_errors(adapter):
+def test_complete_raises_friendly_error_on_503_overloaded_without_retrying(adapter):
+    # Regressão: relatado pelo usuário com dados reais — 503 (modelo
+    # sobrecarregado) é transitório, mas nunca deve travar aqui esperando
+    # e tentando de novo sozinho; quem decide tentar outro provedor (ou
+    # tentar de novo depois) é o FallbackAIAdapter.
+    adapter._client.chat.completions.create.side_effect = _api_status_error(503)
+
+    with pytest.raises(AIProviderError, match="sobrecarregado"):
+        adapter.complete("oi")
+
+    assert adapter._client.chat.completions.create.call_count == 1
+
+
+def test_complete_raises_generic_error_for_other_status_codes(adapter):
     adapter._client.chat.completions.create.side_effect = _api_status_error(500)
 
     with pytest.raises(AIProviderError, match="código 500"):

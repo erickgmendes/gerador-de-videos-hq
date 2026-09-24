@@ -129,6 +129,38 @@ def test_run_image_prompts_job_caps_total_panels_for_the_whole_project(
         verify.close()
 
 
+def test_run_image_prompts_job_paces_calls_between_scenes(db_session, db_session_factory, test_settings, monkeypatch):
+    # Regressão: relatado pelo usuário com dados reais — sem pausa entre
+    # chamadas de cena, um lote de várias cenas disparava rápido demais e
+    # estourava o teto de requisições/minuto do tier gratuito do Gemini
+    # (bem menor que o de tokens), mesmo com o conteúdo cabendo no limite
+    # de tokens. A pausa entre CENAS (não por tentativa de IA) resolve.
+    from app.config import get_settings
+
+    monkeypatch.setenv("IMAGE_PROMPT_SCENE_PAUSE_SECONDS", "9")
+    get_settings.cache_clear()
+
+    sleep_calls: list[float] = []
+    monkeypatch.setattr("app.services.image_prompts.service.time.sleep", lambda seconds: sleep_calls.append(seconds))
+
+    project = ProjectService(db_session).create_project(
+        ProjectCreate(name="Projeto Pausado", bible_reference="Lc 1:1-25", passage_text="Texto de teste.")
+    )
+    scenes = [
+        Scene(project_id=project.id, order=i, narration_excerpt=f"Cena {i}.", actual_duration=4.0) for i in range(1, 4)
+    ]
+    SceneRepository(db_session).replace_all(project.id, scenes)
+
+    job = _create_image_prompts_job(db_session, project.id)
+    ai = _PanelCountEchoAIAdapter()
+
+    run_image_prompts_job(project.id, job.id, ai, db_session_factory)
+
+    # 3 cenas -> pausa só ENTRE elas, nunca antes da primeira nem depois
+    # da última.
+    assert sleep_calls == [9.0, 9.0]
+
+
 def test_run_image_prompts_job_computes_panels_and_caches_characters(db_session, db_session_factory, test_settings):
     project = _create_project_with_audio(db_session, db_session_factory)
     scenes = SceneRepository(db_session).list_for_project(project.id)

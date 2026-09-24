@@ -80,6 +80,12 @@ class ImagePrompt(Base):
     prompt_text: Mapped[str] = mapped_column(Text, default="")
     image_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     image_uploaded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Fase 5 — animação do painel já ilustrado. Mesma linha (não uma
+    # tabela própria): a relação é 1:1 com o painel, sem a dimensão
+    # cena->vários-painéis que justificou ImagePrompt ser separado de Scene.
+    video_prompt_text: Mapped[str] = mapped_column(Text, default="")
+    video_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    video_uploaded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="ready")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 

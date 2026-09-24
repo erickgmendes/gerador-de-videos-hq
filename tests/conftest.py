@@ -26,6 +26,13 @@ def test_settings(tmp_path, monkeypatch):
     monkeypatch.setenv("DATA_DIR", str(data_dir))
     monkeypatch.setenv("PROJECTS_DIR", str(projects_dir))
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
+    # Sem pausa entre cenas nos testes — a pausa real (Settings.
+    # image_prompt_scene_pause_seconds) existe pra respeitar limite de
+    # requisições/minuto de provedor de verdade; testes usam FakeAIAdapter
+    # (instantâneo), então esperar de verdade só deixaria a suíte lenta
+    # sem testar nada a mais. Testes que precisam validar a pausa em si
+    # sobrescrevem isto e mockam time.sleep.
+    monkeypatch.setenv("IMAGE_PROMPT_SCENE_PAUSE_SECONDS", "0")
     # Aponta para um .env que não existe — isola os testes do .env real do
     # projeto (senão, uma GROQ_API_KEY salva de verdade via Configurações
     # vazaria para todo o resto da suíte). Testes que precisam de um .env

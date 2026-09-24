@@ -13,7 +13,7 @@ from app.config import get_settings
 from app.db import get_session_factory
 from app.domain.errors import AIProviderError, DomainError, ProjectNotFoundError
 from app.services.jobs import reconcile_stale_jobs
-from app.web.routes import audio, dashboard, diagnostics, image_prompts, narration, projects, settings
+from app.web.routes import audio, dashboard, diagnostics, image_prompts, narration, projects, settings, video_prompts
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
@@ -44,6 +44,7 @@ def create_app() -> FastAPI:
     app.include_router(narration.router)
     app.include_router(audio.router)
     app.include_router(image_prompts.router)
+    app.include_router(video_prompts.router)
     app.include_router(settings.router)
     app.include_router(diagnostics.router)
     app.include_router(health.router)

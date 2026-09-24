@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import math
 import re
+import time
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -310,7 +311,15 @@ def run_image_prompts_job(
             )
 
             next_global_order = image_prompt_repo.max_global_order(project_id) + 1
-            for scene in targets:
+            for index, scene in enumerate(targets):
+                if index > 0 and settings.image_prompt_scene_pause_seconds > 0:
+                    # Espaça as chamadas entre cenas — ver Settings.
+                    # image_prompt_scene_pause_seconds (relatado pelo
+                    # usuário: sem isso, um lote de várias cenas dispara
+                    # chamadas rápido demais e estoura o teto de
+                    # requisições/minuto do tier gratuito do Gemini, mesmo
+                    # quando o conteúdo cabe no limite de tokens).
+                    time.sleep(settings.image_prompt_scene_pause_seconds)
                 existing_panels = existing_panels_by_scene[scene.id]
                 next_global_order = _process_scene(
                     db,

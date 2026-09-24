@@ -1,2 +1,2 @@
-# Implementado na Fase 5: geração de prompts de animação a partir das
-# imagens já prontas, seguindo as seções 24-27.
+# Implementado na Fase 5: prompt fixo de animação (sem IA, a pedido do
+# usuário) para cada painel de imagem já gerado e enviado na Fase 4.

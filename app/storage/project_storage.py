@@ -99,3 +99,18 @@ def image_file_path(project_id: str, global_order: int, extension: str) -> Path:
     `extension` inclui o ponto (ex.: ".png"), preservando o formato
     enviado pelo usuário."""
     return project_root(project_id) / "images" / f"{global_order:03d}{extension}"
+
+
+def video_prompts_export_path(project_id: str) -> Path:
+    """Exportação de todos os prompts de vídeo (Fase 5) num único .txt,
+    mesmo formato/motivo do image_prompts_export_path (blocos separados
+    por linha em branco, para colar na ferramenta externa de imagem-para-
+    vídeo)."""
+    return project_root(project_id) / "prompts" / "videos.txt"
+
+
+def video_file_path(project_id: str, global_order: int, extension: str) -> Path:
+    """Um vídeo por painel, numerado globalmente (001.mp4, 002.mp4...) —
+    mesmo esquema de numeração de image_file_path, para o upload em lote
+    conseguir associar pelo nome do arquivo."""
+    return project_root(project_id) / "videos" / f"{global_order:03d}{extension}"

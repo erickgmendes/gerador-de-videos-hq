@@ -34,3 +34,10 @@ class ImagePromptError(DomainError):
     """A saída da IA não pôde ser interpretada como painéis de imagem
     (formato inesperado), ou faltam pré-requisitos (áudio ainda não
     gerado) para calcular quantos painéis cada cena precisa."""
+
+
+class VideoPromptError(DomainError):
+    """Falta um pré-requisito (nem todos os painéis têm imagem enviada
+    ainda) para gerar os prompts de animação — mensagem já amigável para
+    exibir na UI. Diferente de ImagePromptError, nunca é sobre uma IA
+    (Fase 5 não usa IA — ver app/services/video_prompts/prompts.py)."""
